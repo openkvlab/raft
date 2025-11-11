@@ -1,5 +1,7 @@
 # Raft library
 
+> This repository was forked from [etcd-io/raft](https://github.com/etcd-io/raft). The README will be updated later.
+
 Raft is a protocol with which a cluster of nodes can maintain a replicated state machine.
 The state machine is kept in sync through the use of a replicated log.
 For more details on Raft, see "In Search of an Understandable Consensus Algorithm"
