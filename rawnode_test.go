@@ -23,9 +23,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.etcd.io/raft/v3/quorum"
-	pb "go.etcd.io/raft/v3/raftpb"
-	"go.etcd.io/raft/v3/tracker"
+	"github.com/openkvlab/raft/quorum"
+	pb "github.com/openkvlab/raft/raftpb"
+	"github.com/openkvlab/raft/tracker"
 )
 
 // rawNodeAdapter is essentially a lint that makes sure that RawNode implements

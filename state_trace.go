@@ -20,8 +20,8 @@ import (
 	"strconv"
 	"time"
 
-	"go.etcd.io/raft/v3/raftpb"
-	"go.etcd.io/raft/v3/tracker"
+	"github.com/openkvlab/raft/raftpb"
+	"github.com/openkvlab/raft/tracker"
 )
 
 const StateTraceDeployed = true

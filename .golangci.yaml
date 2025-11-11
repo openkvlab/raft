@@ -51,9 +51,9 @@ formatters:
       sections:
         - standard
         - default
-        - prefix(go.etcd.io)
+        - prefix(github.com/openkvlab)
     goimports:
       local-prefixes:
-        - go.etcd.io
+        - github.com/openkvlab
   exclusions:
     generated: lax

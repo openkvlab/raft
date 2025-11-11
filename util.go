@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"strings"
 
-	pb "go.etcd.io/raft/v3/raftpb"
+	pb "github.com/openkvlab/raft/raftpb"
 )
 
 func (st StateType) MarshalJSON() ([]byte, error) {

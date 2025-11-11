@@ -21,8 +21,8 @@ import (
 	"sync"
 	"time"
 
-	"go.etcd.io/raft/v3"
-	"go.etcd.io/raft/v3/raftpb"
+	"github.com/openkvlab/raft"
+	"github.com/openkvlab/raft/raftpb"
 )
 
 type node struct {

@@ -25,10 +25,10 @@ import (
 	"strings"
 	"sync"
 
-	"go.etcd.io/raft/v3/confchange"
-	"go.etcd.io/raft/v3/quorum"
-	pb "go.etcd.io/raft/v3/raftpb"
-	"go.etcd.io/raft/v3/tracker"
+	"github.com/openkvlab/raft/confchange"
+	"github.com/openkvlab/raft/quorum"
+	pb "github.com/openkvlab/raft/raftpb"
+	"github.com/openkvlab/raft/tracker"
 )
 
 const (
