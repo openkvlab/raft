@@ -1,3 +1,6 @@
+// This code has been modified from its original form by The Openkblab Authors.
+// All modifications are Copyright 2026 The Openkblab Authors.
+
 // Copyright 2019 The etcd Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -76,9 +79,11 @@ func (c MajorityConfig) Describe(l AckedIndexer) string {
 	})
 
 	// Populate .bar.
-	for i := range info {
-		if i > 0 && info[i-1].idx < info[i].idx {
+	for i := 1; i < len(info); i++ {
+		if info[i-1].idx < info[i].idx {
 			info[i].bar = i
+		} else {
+			info[i].bar = info[i-1].bar
 		}
 	}
 
