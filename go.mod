@@ -1,8 +1,8 @@
 module github.com/openkvlab/raft
 
-go 1.24
+go 1.25
 
-toolchain go1.24.11
+toolchain go1.25.8
 
 require (
 	github.com/cockroachdb/datadriven v1.0.2
