@@ -1,3 +1,6 @@
+// This code has been modified from its original form by The Openkblab Authors.
+// All modifications are Copyright 2026 The Openkblab Authors.
+//
 // Copyright 2015 The etcd Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -230,18 +233,47 @@ func TestStorageApplySnapshot(t *testing.T) {
 	cs := &pb.ConfState{Voters: []uint64{1, 2, 3}}
 	data := []byte("data")
 
-	tests := []pb.Snapshot{{Data: data, Metadata: pb.SnapshotMetadata{Index: 4, Term: 4, ConfState: *cs}},
-		{Data: data, Metadata: pb.SnapshotMetadata{Index: 3, Term: 3, ConfState: *cs}},
+	testCases := []struct {
+		name          string
+		snapshots     []pb.Snapshot
+		expectedError error
+	}{
+		{
+			name: "normal case",
+			snapshots: []pb.Snapshot{
+				{Data: data, Metadata: pb.SnapshotMetadata{Index: 4, Term: 4, ConfState: *cs}},
+			},
+			expectedError: nil,
+		},
+		{
+			name: "snapshot out of date",
+			snapshots: []pb.Snapshot{
+				{Data: data, Metadata: pb.SnapshotMetadata{Index: 4, Term: 4, ConfState: *cs}},
+				{Data: data, Metadata: pb.SnapshotMetadata{Index: 3, Term: 3, ConfState: *cs}},
+			},
+			expectedError: ErrSnapOutOfDate,
+		},
+		{
+			name: "bootstrap with confState",
+			snapshots: []pb.Snapshot{
+				{Data: data, Metadata: pb.SnapshotMetadata{ConfState: *cs}},
+			},
+			expectedError: nil,
+		},
 	}
 
-	s := NewMemoryStorage()
-
-	i := 0
-	tt := tests[i]
-	require.NoError(t, s.ApplySnapshot(tt))
-
-	// ApplySnapshot fails due to ErrSnapOutOfDate.
-	i = 1
-	tt = tests[i]
-	require.Equal(t, ErrSnapOutOfDate, s.ApplySnapshot(tt))
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			s := NewMemoryStorage()
+			var err error
+			for _, sn := range tt.snapshots {
+				err = s.ApplySnapshot(sn)
+			}
+			if tt.expectedError != nil {
+				require.Equal(t, tt.expectedError, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
 }

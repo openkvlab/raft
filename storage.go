@@ -1,3 +1,6 @@
+// This code has been modified from its original form by The Openkblab Authors.
+// All modifications are Copyright 2026 The Openkblab Authors.
+//
 // Copyright 2015 The etcd Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -211,7 +214,10 @@ func (ms *MemoryStorage) ApplySnapshot(snap pb.Snapshot) error {
 	//handle check for old snapshot being applied
 	msIndex := ms.snapshot.Metadata.Index
 	snapIndex := snap.Metadata.Index
-	if msIndex >= snapIndex {
+	// During bootstrap, applications (e.g., etcd) may initialize only the
+	// ConfState in the snapshot. In this case, both the snapshot index and
+	// term are 0.
+	if msIndex != 0 && msIndex >= snapIndex {
 		return ErrSnapOutOfDate
 	}
 
