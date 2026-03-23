@@ -1,3 +1,6 @@
+// This code has been modified from its original form by The Openkblab Authors.
+// All modifications are Copyright 2026 The Openkblab Authors.
+//
 // Copyright 2022 The etcd Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,10 +31,10 @@ import (
 	_ "github.com/google/addlicense"
 	_ "github.com/gordonklaus/ineffassign"
 	_ "github.com/gyuho/gocovmerge"
-	_ "github.com/hexfusion/schwag"
 	_ "github.com/mdempsky/unconvert"
 	_ "github.com/mgechev/revive"
 	_ "github.com/mikefarah/yq/v4"
+	_ "golang.org/x/tools/cmd/goimports"
 	_ "gotest.tools/gotestsum"
 	_ "gotest.tools/v3"
 	_ "honnef.co/go/tools/cmd/staticcheck"
