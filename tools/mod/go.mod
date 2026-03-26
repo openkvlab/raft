@@ -1,8 +1,8 @@
 module github.com/openkvlab/raft/tools
 
-go 1.25
+go 1.26
 
-toolchain go1.25.8
+toolchain go1.26.1
 
 require (
 	github.com/alexkohler/nakedret v1.0.0
