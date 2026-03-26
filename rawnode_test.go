@@ -117,7 +117,7 @@ func TestRawNodeProposeAndConfChange(t *testing.T) {
 	}{
 		// V1 config change.
 		{
-			pb.ConfChange{Type: pb.ConfChangeAddNode, NodeID: 2},
+			pb.ConfChange{Type: pb.ConfChangeType_ConfChangeAddNode, NodeID: 2},
 			pb.ConfState{Voters: []uint64{1, 2}},
 			nil,
 		},
@@ -125,7 +125,7 @@ func TestRawNodeProposeAndConfChange(t *testing.T) {
 		// a joint config.
 		{
 			pb.ConfChangeV2{Changes: []pb.ConfChangeSingle{
-				{Type: pb.ConfChangeAddNode, NodeID: 2},
+				{Type: pb.ConfChangeType_ConfChangeAddNode, NodeID: 2},
 			},
 			},
 			pb.ConfState{Voters: []uint64{1, 2}},
@@ -134,7 +134,7 @@ func TestRawNodeProposeAndConfChange(t *testing.T) {
 		// Ditto if we add it as a learner instead.
 		{
 			pb.ConfChangeV2{Changes: []pb.ConfChangeSingle{
-				{Type: pb.ConfChangeAddLearnerNode, NodeID: 2},
+				{Type: pb.ConfChangeType_ConfChangeAddLearnerNode, NodeID: 2},
 			},
 			},
 			pb.ConfState{Voters: []uint64{1}, Learners: []uint64{2}},
@@ -143,9 +143,9 @@ func TestRawNodeProposeAndConfChange(t *testing.T) {
 		// We can ask explicitly for joint consensus if we want it.
 		{
 			pb.ConfChangeV2{Changes: []pb.ConfChangeSingle{
-				{Type: pb.ConfChangeAddLearnerNode, NodeID: 2},
+				{Type: pb.ConfChangeType_ConfChangeAddLearnerNode, NodeID: 2},
 			},
-				Transition: pb.ConfChangeTransitionJointExplicit,
+				Transition: pb.ConfChangeTransition_ConfChangeTransitionJointExplicit,
 			},
 			pb.ConfState{Voters: []uint64{1}, VotersOutgoing: []uint64{1}, Learners: []uint64{2}},
 			&pb.ConfState{Voters: []uint64{1}, Learners: []uint64{2}},
@@ -153,9 +153,9 @@ func TestRawNodeProposeAndConfChange(t *testing.T) {
 		// Ditto, but with implicit transition (the harness checks this).
 		{
 			pb.ConfChangeV2{Changes: []pb.ConfChangeSingle{
-				{Type: pb.ConfChangeAddLearnerNode, NodeID: 2},
+				{Type: pb.ConfChangeType_ConfChangeAddLearnerNode, NodeID: 2},
 			},
-				Transition: pb.ConfChangeTransitionJointImplicit,
+				Transition: pb.ConfChangeTransition_ConfChangeTransitionJointImplicit,
 			},
 			pb.ConfState{
 				Voters: []uint64{1}, VotersOutgoing: []uint64{1}, Learners: []uint64{2},
@@ -167,9 +167,9 @@ func TestRawNodeProposeAndConfChange(t *testing.T) {
 		// which we really need joint config changes and also need LearnersNext.
 		{
 			pb.ConfChangeV2{Changes: []pb.ConfChangeSingle{
-				{NodeID: 2, Type: pb.ConfChangeAddNode},
-				{NodeID: 1, Type: pb.ConfChangeAddLearnerNode},
-				{NodeID: 3, Type: pb.ConfChangeAddLearnerNode},
+				{NodeID: 2, Type: pb.ConfChangeType_ConfChangeAddNode},
+				{NodeID: 1, Type: pb.ConfChangeType_ConfChangeAddLearnerNode},
+				{NodeID: 3, Type: pb.ConfChangeType_ConfChangeAddLearnerNode},
 			},
 			},
 			pb.ConfState{
@@ -184,11 +184,11 @@ func TestRawNodeProposeAndConfChange(t *testing.T) {
 		// Ditto explicit.
 		{
 			pb.ConfChangeV2{Changes: []pb.ConfChangeSingle{
-				{NodeID: 2, Type: pb.ConfChangeAddNode},
-				{NodeID: 1, Type: pb.ConfChangeAddLearnerNode},
-				{NodeID: 3, Type: pb.ConfChangeAddLearnerNode},
+				{NodeID: 2, Type: pb.ConfChangeType_ConfChangeAddNode},
+				{NodeID: 1, Type: pb.ConfChangeType_ConfChangeAddLearnerNode},
+				{NodeID: 3, Type: pb.ConfChangeType_ConfChangeAddLearnerNode},
 			},
-				Transition: pb.ConfChangeTransitionJointExplicit,
+				Transition: pb.ConfChangeTransition_ConfChangeTransitionJointExplicit,
 			},
 			pb.ConfState{
 				Voters:         []uint64{2},
@@ -202,11 +202,11 @@ func TestRawNodeProposeAndConfChange(t *testing.T) {
 		{
 			pb.ConfChangeV2{
 				Changes: []pb.ConfChangeSingle{
-					{NodeID: 2, Type: pb.ConfChangeAddNode},
-					{NodeID: 1, Type: pb.ConfChangeAddLearnerNode},
-					{NodeID: 3, Type: pb.ConfChangeAddLearnerNode},
+					{NodeID: 2, Type: pb.ConfChangeType_ConfChangeAddNode},
+					{NodeID: 1, Type: pb.ConfChangeType_ConfChangeAddLearnerNode},
+					{NodeID: 3, Type: pb.ConfChangeType_ConfChangeAddLearnerNode},
 				},
-				Transition: pb.ConfChangeTransitionJointImplicit,
+				Transition: pb.ConfChangeTransition_ConfChangeTransitionJointImplicit,
 			},
 			pb.ConfState{
 				Voters:         []uint64{2},
@@ -239,11 +239,11 @@ func TestRawNodeProposeAndConfChange(t *testing.T) {
 				s.Append(rd.Entries)
 				for _, ent := range rd.CommittedEntries {
 					var cc pb.ConfChangeI
-					if ent.Type == pb.EntryConfChange {
+					if ent.Type == pb.EntryType_EntryConfChange {
 						var ccc pb.ConfChange
 						require.NoError(t, ccc.Unmarshal(ent.Data))
 						cc = ccc
-					} else if ent.Type == pb.EntryConfChangeV2 {
+					} else if ent.Type == pb.EntryType_EntryConfChangeV2 {
 						var ccc pb.ConfChangeV2
 						require.NoError(t, ccc.Unmarshal(ent.Data))
 						cc = ccc
@@ -282,9 +282,9 @@ func TestRawNodeProposeAndConfChange(t *testing.T) {
 			require.Len(t, entries, 2)
 			assert.Equal(t, []byte("somedata"), entries[0].Data)
 
-			typ := pb.EntryConfChange
+			typ := pb.EntryType_EntryConfChange
 			if _, ok := tc.cc.AsV1(); !ok {
-				typ = pb.EntryConfChangeV2
+				typ = pb.EntryType_EntryConfChangeV2
 			}
 			require.Equal(t, typ, entries[1].Type)
 			assert.Equal(t, ccdata, entries[1].Data)
@@ -323,7 +323,7 @@ func TestRawNodeProposeAndConfChange(t *testing.T) {
 
 			// Check that the right ConfChange comes out.
 			require.Len(t, rd.Entries, 1)
-			require.Equal(t, pb.EntryConfChangeV2, rd.Entries[0].Type)
+			require.Equal(t, pb.EntryType_EntryConfChangeV2, rd.Entries[0].Type)
 			var cc pb.ConfChangeV2
 			require.NoError(t, cc.Unmarshal(rd.Entries[0].Data))
 			require.Equal(t, pb.ConfChangeV2{Context: context}, cc)
@@ -342,9 +342,9 @@ func TestRawNodeProposeAndConfChange(t *testing.T) {
 // lost leadership.
 func TestRawNodeJointAutoLeave(t *testing.T) {
 	testCc := pb.ConfChangeV2{Changes: []pb.ConfChangeSingle{
-		{Type: pb.ConfChangeAddLearnerNode, NodeID: 2},
+		{Type: pb.ConfChangeType_ConfChangeAddLearnerNode, NodeID: 2},
 	},
-		Transition: pb.ConfChangeTransitionJointImplicit,
+		Transition: pb.ConfChangeTransition_ConfChangeTransitionJointImplicit,
 	}
 	expCs := pb.ConfState{
 		Voters: []uint64{1}, VotersOutgoing: []uint64{1}, Learners: []uint64{2},
@@ -370,14 +370,14 @@ func TestRawNodeJointAutoLeave(t *testing.T) {
 		s.Append(rd.Entries)
 		for _, ent := range rd.CommittedEntries {
 			var cc pb.ConfChangeI
-			if ent.Type == pb.EntryConfChangeV2 {
+			if ent.Type == pb.EntryType_EntryConfChangeV2 {
 				var ccc pb.ConfChangeV2
 				require.NoError(t, ccc.Unmarshal(ent.Data))
 				cc = &ccc
 			}
 			if cc != nil {
 				// Force it step down.
-				rawNode.Step(pb.Message{Type: pb.MsgHeartbeatResp, From: 1, Term: rawNode.raft.Term + 1})
+				rawNode.Step(pb.Message{Type: pb.MessageType_MsgHeartbeatResp, From: 1, Term: rawNode.raft.Term + 1})
 				cs = rawNode.ApplyConfChange(cc)
 			}
 		}
@@ -403,7 +403,7 @@ func TestRawNodeJointAutoLeave(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, entries, 2)
 	assert.Equal(t, []byte("somedata"), entries[0].Data)
-	require.Equal(t, pb.EntryConfChangeV2, entries[1].Type)
+	require.Equal(t, pb.EntryType_EntryConfChangeV2, entries[1].Type)
 	assert.Equal(t, ccdata, entries[1].Data)
 
 	require.Equal(t, &expCs, cs)
@@ -434,7 +434,7 @@ func TestRawNodeJointAutoLeave(t *testing.T) {
 	s.Append(rd.Entries)
 	// Check that the right ConfChange comes out.
 	require.Len(t, rd.Entries, 1)
-	require.Equal(t, pb.EntryConfChangeV2, rd.Entries[0].Type)
+	require.Equal(t, pb.EntryType_EntryConfChangeV2, rd.Entries[0].Type)
 	var cc pb.ConfChangeV2
 	require.NoError(t, cc.Unmarshal(rd.Entries[0].Data))
 	require.Equal(t, pb.ConfChangeV2{Context: nil}, cc)
@@ -471,7 +471,7 @@ func TestRawNodeProposeAddDuplicateNode(t *testing.T) {
 		rd = rawNode.Ready()
 		s.Append(rd.Entries)
 		for _, entry := range rd.CommittedEntries {
-			if entry.Type == pb.EntryConfChange {
+			if entry.Type == pb.EntryType_EntryConfChange {
 				var cc pb.ConfChange
 				cc.Unmarshal(entry.Data)
 				rawNode.ApplyConfChange(cc)
@@ -480,7 +480,7 @@ func TestRawNodeProposeAddDuplicateNode(t *testing.T) {
 		rawNode.Advance(rd)
 	}
 
-	cc1 := pb.ConfChange{Type: pb.ConfChangeAddNode, NodeID: 1}
+	cc1 := pb.ConfChange{Type: pb.ConfChangeType_ConfChangeAddNode, NodeID: 1}
 	ccdata1, err := cc1.Marshal()
 	require.NoError(t, err)
 	proposeConfChangeAndApply(cc1)
@@ -489,7 +489,7 @@ func TestRawNodeProposeAddDuplicateNode(t *testing.T) {
 	proposeConfChangeAndApply(cc1)
 
 	// the new node join should be ok
-	cc2 := pb.ConfChange{Type: pb.ConfChangeAddNode, NodeID: 2}
+	cc2 := pb.ConfChange{Type: pb.ConfChangeType_ConfChangeAddNode, NodeID: 2}
 	ccdata2, err := cc2.Marshal()
 	require.NoError(t, err)
 	proposeConfChangeAndApply(cc2)
@@ -548,7 +548,7 @@ func TestRawNodeReadIndex(t *testing.T) {
 	}
 	// ensure that MsgReadIndex message is sent to the underlying raft
 	require.Len(t, msgs, 1)
-	assert.Equal(t, pb.MsgReadIndex, msgs[0].Type)
+	assert.Equal(t, pb.MessageType_MsgReadIndex, msgs[0].Type)
 	assert.Equal(t, wrequestCtx, msgs[0].Entries[0].Data)
 }
 
@@ -769,7 +769,7 @@ func TestRawNodeCommitPaginationAfterRestart(t *testing.T) {
 		ent := pb.Entry{
 			Term:  1,
 			Index: uint64(i + 1),
-			Type:  pb.EntryNormal,
+			Type:  pb.EntryType_EntryNormal,
 			Data:  []byte("a"),
 		}
 
@@ -786,7 +786,7 @@ func TestRawNodeCommitPaginationAfterRestart(t *testing.T) {
 	s.ents = append(s.ents, pb.Entry{
 		Term:  1,
 		Index: uint64(11),
-		Type:  pb.EntryNormal,
+		Type:  pb.EntryType_EntryNormal,
 		Data:  []byte("boom"),
 	})
 
@@ -804,7 +804,7 @@ func TestRawNodeCommitPaginationAfterRestart(t *testing.T) {
 		highestApplied = rd.CommittedEntries[n-1].Index
 		rawNode.Advance(rd)
 		rawNode.Step(pb.Message{
-			Type:   pb.MsgHeartbeat,
+			Type:   pb.MessageType_MsgHeartbeat,
 			To:     1,
 			From:   2, // illegal, but we get away with it
 			Term:   1,
@@ -1025,19 +1025,19 @@ func benchmarkRawNodeImpl(b *testing.B, peers ...uint64) {
 			}
 			s.Append(rd.Entries)
 			for _, m := range rd.Messages {
-				if m.Type == pb.MsgVote {
-					resp := pb.Message{To: m.From, From: m.To, Term: m.Term, Type: pb.MsgVoteResp}
+				if m.Type == pb.MessageType_MsgVote {
+					resp := pb.Message{To: m.From, From: m.To, Term: m.Term, Type: pb.MessageType_MsgVoteResp}
 					if debug {
 						b.Log(DescribeMessage(resp, nil))
 					}
 					rn.Step(resp)
 				}
-				if m.Type == pb.MsgApp {
+				if m.Type == pb.MessageType_MsgApp {
 					idx := m.Index
 					if n := len(m.Entries); n > 0 {
 						idx = m.Entries[n-1].Index
 					}
-					resp := pb.Message{To: m.From, From: m.To, Type: pb.MsgAppResp, Term: m.Term, Index: idx}
+					resp := pb.Message{To: m.From, From: m.To, Type: pb.MessageType_MsgAppResp, Term: m.Term, Index: idx}
 					if debug {
 						b.Log(DescribeMessage(resp, nil))
 					}

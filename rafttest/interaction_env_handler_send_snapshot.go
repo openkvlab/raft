@@ -38,7 +38,7 @@ func (env *InteractionEnv) SendSnapshot(fromIdx, toIdx int) error {
 	}
 	from, to := uint64(fromIdx+1), uint64(toIdx+1)
 	msg := raftpb.Message{
-		Type:     raftpb.MsgSnap,
+		Type:     raftpb.MessageType_MsgSnap,
 		Term:     env.Nodes[fromIdx].BasicStatus().Term,
 		From:     from,
 		To:       to,

@@ -27,26 +27,26 @@ func (st StateType) MarshalJSON() ([]byte, error) {
 }
 
 var isLocalMsg = [...]bool{
-	pb.MsgHup:               true,
-	pb.MsgBeat:              true,
-	pb.MsgUnreachable:       true,
-	pb.MsgSnapStatus:        true,
-	pb.MsgCheckQuorum:       true,
-	pb.MsgStorageAppend:     true,
-	pb.MsgStorageAppendResp: true,
-	pb.MsgStorageApply:      true,
-	pb.MsgStorageApplyResp:  true,
+	pb.MessageType_MsgHup:               true,
+	pb.MessageType_MsgBeat:              true,
+	pb.MessageType_MsgUnreachable:       true,
+	pb.MessageType_MsgSnapStatus:        true,
+	pb.MessageType_MsgCheckQuorum:       true,
+	pb.MessageType_MsgStorageAppend:     true,
+	pb.MessageType_MsgStorageAppendResp: true,
+	pb.MessageType_MsgStorageApply:      true,
+	pb.MessageType_MsgStorageApplyResp:  true,
 }
 
 var isResponseMsg = [...]bool{
-	pb.MsgAppResp:           true,
-	pb.MsgVoteResp:          true,
-	pb.MsgHeartbeatResp:     true,
-	pb.MsgUnreachable:       true,
-	pb.MsgReadIndexResp:     true,
-	pb.MsgPreVoteResp:       true,
-	pb.MsgStorageAppendResp: true,
-	pb.MsgStorageApplyResp:  true,
+	pb.MessageType_MsgAppResp:           true,
+	pb.MessageType_MsgVoteResp:          true,
+	pb.MessageType_MsgHeartbeatResp:     true,
+	pb.MessageType_MsgUnreachable:       true,
+	pb.MessageType_MsgReadIndexResp:     true,
+	pb.MessageType_MsgPreVoteResp:       true,
+	pb.MessageType_MsgStorageAppendResp: true,
+	pb.MessageType_MsgStorageApplyResp:  true,
 }
 
 func isMsgInArray(msgt pb.MessageType, arr []bool) bool {
@@ -69,10 +69,10 @@ func IsLocalMsgTarget(id uint64) bool {
 // voteResponseType maps vote and prevote message types to their corresponding responses.
 func voteRespMsgType(msgt pb.MessageType) pb.MessageType {
 	switch msgt {
-	case pb.MsgVote:
-		return pb.MsgVoteResp
-	case pb.MsgPreVote:
-		return pb.MsgPreVoteResp
+	case pb.MessageType_MsgVote:
+		return pb.MessageType_MsgVoteResp
+	case pb.MessageType_MsgPreVote:
+		return pb.MessageType_MsgPreVoteResp
 	default:
 		panic(fmt.Sprintf("not a vote message: %s", msgt))
 	}
@@ -216,16 +216,16 @@ func DescribeEntry(e pb.Entry, f EntryFormatter) string {
 
 	var formatted string
 	switch e.Type {
-	case pb.EntryNormal:
+	case pb.EntryType_EntryNormal:
 		formatted = f(e.Data)
-	case pb.EntryConfChange:
+	case pb.EntryType_EntryConfChange:
 		var cc pb.ConfChange
 		if err := cc.Unmarshal(e.Data); err != nil {
 			formatted = err.Error()
 		} else {
 			formatted = formatConfChange(cc)
 		}
-	case pb.EntryConfChangeV2:
+	case pb.EntryType_EntryConfChangeV2:
 		var cc pb.ConfChangeV2
 		if err := cc.Unmarshal(e.Data); err != nil {
 			formatted = err.Error()

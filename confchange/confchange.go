@@ -156,13 +156,13 @@ func (c Changer) apply(cfg *tracker.Config, trk tracker.ProgressMap, ccs ...pb.C
 			continue
 		}
 		switch cc.Type {
-		case pb.ConfChangeAddNode:
+		case pb.ConfChangeType_ConfChangeAddNode:
 			c.makeVoter(cfg, trk, cc.NodeID)
-		case pb.ConfChangeAddLearnerNode:
+		case pb.ConfChangeType_ConfChangeAddLearnerNode:
 			c.makeLearner(cfg, trk, cc.NodeID)
-		case pb.ConfChangeRemoveNode:
+		case pb.ConfChangeType_ConfChangeRemoveNode:
 			c.remove(cfg, trk, cc.NodeID)
-		case pb.ConfChangeUpdateNode:
+		case pb.ConfChangeType_ConfChangeUpdateNode:
 		default:
 			return fmt.Errorf("unexpected conf type %d", cc.Type)
 		}

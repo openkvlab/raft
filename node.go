@@ -464,10 +464,12 @@ func (n *node) Tick() {
 	}
 }
 
-func (n *node) Campaign(ctx context.Context) error { return n.step(ctx, pb.Message{Type: pb.MsgHup}) }
+func (n *node) Campaign(ctx context.Context) error {
+	return n.step(ctx, pb.Message{Type: pb.MessageType_MsgHup})
+}
 
 func (n *node) Propose(ctx context.Context, data []byte) error {
-	return n.stepWait(ctx, pb.Message{Type: pb.MsgProp, Entries: []pb.Entry{{Data: data}}})
+	return n.stepWait(ctx, pb.Message{Type: pb.MessageType_MsgProp, Entries: []pb.Entry{{Data: data}}})
 }
 
 func (n *node) Step(ctx context.Context, m pb.Message) error {
@@ -484,7 +486,7 @@ func confChangeToMsg(c pb.ConfChangeI) (pb.Message, error) {
 	if err != nil {
 		return pb.Message{}, err
 	}
-	return pb.Message{Type: pb.MsgProp, Entries: []pb.Entry{{Type: typ, Data: data}}}, nil
+	return pb.Message{Type: pb.MessageType_MsgProp, Entries: []pb.Entry{{Type: typ, Data: data}}}, nil
 }
 
 func (n *node) ProposeConfChange(ctx context.Context, cc pb.ConfChangeI) error {
@@ -506,7 +508,7 @@ func (n *node) stepWait(ctx context.Context, m pb.Message) error {
 // Step advances the state machine using msgs. The ctx.Err() will be returned,
 // if any.
 func (n *node) stepWithWaitOption(ctx context.Context, m pb.Message, wait bool) error {
-	if m.Type != pb.MsgProp {
+	if m.Type != pb.MessageType_MsgProp {
 		select {
 		case n.recvc <- m:
 			return nil
@@ -578,7 +580,7 @@ func (n *node) Status() Status {
 
 func (n *node) ReportUnreachable(id uint64) {
 	select {
-	case n.recvc <- pb.Message{Type: pb.MsgUnreachable, From: id}:
+	case n.recvc <- pb.Message{Type: pb.MessageType_MsgUnreachable, From: id}:
 	case <-n.done:
 	}
 }
@@ -587,7 +589,7 @@ func (n *node) ReportSnapshot(id uint64, status SnapshotStatus) {
 	rej := status == SnapshotFailure
 
 	select {
-	case n.recvc <- pb.Message{Type: pb.MsgSnapStatus, From: id, Reject: rej}:
+	case n.recvc <- pb.Message{Type: pb.MessageType_MsgSnapStatus, From: id, Reject: rej}:
 	case <-n.done:
 	}
 }
@@ -595,16 +597,16 @@ func (n *node) ReportSnapshot(id uint64, status SnapshotStatus) {
 func (n *node) TransferLeadership(ctx context.Context, lead, transferee uint64) {
 	select {
 	// manually set 'from' and 'to', so that leader can voluntarily transfers its leadership
-	case n.recvc <- pb.Message{Type: pb.MsgTransferLeader, From: transferee, To: lead}:
+	case n.recvc <- pb.Message{Type: pb.MessageType_MsgTransferLeader, From: transferee, To: lead}:
 	case <-n.done:
 	case <-ctx.Done():
 	}
 }
 
 func (n *node) ForgetLeader(ctx context.Context) error {
-	return n.step(ctx, pb.Message{Type: pb.MsgForgetLeader})
+	return n.step(ctx, pb.Message{Type: pb.MessageType_MsgForgetLeader})
 }
 
 func (n *node) ReadIndex(ctx context.Context, rctx []byte) error {
-	return n.step(ctx, pb.Message{Type: pb.MsgReadIndex, Entries: []pb.Entry{{Data: rctx}}})
+	return n.step(ctx, pb.Message{Type: pb.MessageType_MsgReadIndex, Entries: []pb.Entry{{Data: rctx}}})
 }

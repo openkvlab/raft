@@ -63,9 +63,9 @@ func (env *InteractionEnv) ProcessReady(idx int) error {
 				panic("unexpected local msg target")
 			}
 			switch m.Type {
-			case raftpb.MsgStorageAppend:
+			case raftpb.MessageType_MsgStorageAppend:
 				n.AppendWork = append(n.AppendWork, m)
-			case raftpb.MsgStorageApply:
+			case raftpb.MessageType_MsgStorageApply:
 				n.ApplyWork = append(n.ApplyWork, m)
 			default:
 				panic(fmt.Sprintf("unexpected message type %s", m.Type))

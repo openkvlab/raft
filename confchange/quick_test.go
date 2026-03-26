@@ -167,11 +167,11 @@ func (initialChanges) Generate(rand *rand.Rand, _ int) reflect.Value {
 	}
 	id := func() uint64 { return uint64(num()) }
 	typ := func() pb.ConfChangeType {
-		return pb.ConfChangeAddNode
+		return pb.ConfChangeType_ConfChangeAddNode
 	}
 	// NodeID one is special - it's in the initial config and will be a voter
 	// always (this is to avoid uninteresting edge cases where the simple conf
 	// changes can't easily make progress).
-	ccs := append([]pb.ConfChangeSingle{{Type: pb.ConfChangeAddNode, NodeID: 1}}, genCC(num, id, typ)...)
+	ccs := append([]pb.ConfChangeSingle{{Type: pb.ConfChangeType_ConfChangeAddNode, NodeID: 1}}, genCC(num, id, typ)...)
 	return reflect.ValueOf(ccs)
 }
