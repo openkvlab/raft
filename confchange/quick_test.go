@@ -138,7 +138,7 @@ func genCC(num func() int, id func() uint64, typ func() pb.ConfChangeType) []pb.
 	var ccs []pb.ConfChangeSingle
 	n := num()
 	for i := 0; i < n; i++ {
-		ccs = append(ccs, pb.ConfChangeSingle{Type: typ(), NodeID: id()})
+		ccs = append(ccs, pb.ConfChangeSingle{Type: typ(), NodeId: id()})
 	}
 	return ccs
 }
@@ -172,6 +172,6 @@ func (initialChanges) Generate(rand *rand.Rand, _ int) reflect.Value {
 	// NodeID one is special - it's in the initial config and will be a voter
 	// always (this is to avoid uninteresting edge cases where the simple conf
 	// changes can't easily make progress).
-	ccs := append([]pb.ConfChangeSingle{{Type: pb.ConfChangeType_ConfChangeAddNode, NodeID: 1}}, genCC(num, id, typ)...)
+	ccs := append([]pb.ConfChangeSingle{{Type: pb.ConfChangeType_ConfChangeAddNode, NodeId: 1}}, genCC(num, id, typ)...)
 	return reflect.ValueOf(ccs)
 }
