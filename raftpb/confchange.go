@@ -39,14 +39,14 @@ func MarshalConfChange(c ConfChangeI) (EntryType, []byte, error) {
 		// A nil data unmarshals into an empty ConfChangeV2 and has the benefit
 		// that appendEntry can never refuse it based on its size (which
 		// registers as zero).
-		typ = EntryConfChangeV2
+		typ = EntryType_EntryConfChangeV2
 		ccdata = nil
 	} else if ccv1, ok := c.AsV1(); ok {
-		typ = EntryConfChange
+		typ = EntryType_EntryConfChange
 		ccdata, err = ccv1.Marshal()
 	} else {
 		ccv2 := c.AsV2()
-		typ = EntryConfChangeV2
+		typ = EntryType_EntryConfChangeV2
 		ccdata, err = ccv2.Marshal()
 	}
 	return typ, ccdata, err
@@ -86,15 +86,15 @@ func (c ConfChangeV2) EnterJoint() (autoLeave bool, ok bool) {
 	// base config (i.e. two voters are turned into learners in the process of
 	// applying the conf change). In practice, these distinctions should not
 	// matter, so we keep it simple and use Joint Consensus liberally.
-	if c.Transition != ConfChangeTransitionAuto || len(c.Changes) > 1 {
+	if c.Transition != ConfChangeTransition_ConfChangeTransitionAuto || len(c.Changes) > 1 {
 		// Use Joint Consensus.
 		var autoLeave bool
 		switch c.Transition {
-		case ConfChangeTransitionAuto:
+		case ConfChangeTransition_ConfChangeTransitionAuto:
 			autoLeave = true
-		case ConfChangeTransitionJointImplicit:
+		case ConfChangeTransition_ConfChangeTransitionJointImplicit:
 			autoLeave = true
-		case ConfChangeTransitionJointExplicit:
+		case ConfChangeTransition_ConfChangeTransitionJointExplicit:
 		default:
 			panic(fmt.Sprintf("unknown transition: %+v", c))
 		}
@@ -131,13 +131,13 @@ func ConfChangesFromString(s string) ([]ConfChangeSingle, error) {
 		var cc ConfChangeSingle
 		switch tok[0] {
 		case 'v':
-			cc.Type = ConfChangeAddNode
+			cc.Type = ConfChangeType_ConfChangeAddNode
 		case 'l':
-			cc.Type = ConfChangeAddLearnerNode
+			cc.Type = ConfChangeType_ConfChangeAddLearnerNode
 		case 'r':
-			cc.Type = ConfChangeRemoveNode
+			cc.Type = ConfChangeType_ConfChangeRemoveNode
 		case 'u':
-			cc.Type = ConfChangeUpdateNode
+			cc.Type = ConfChangeType_ConfChangeUpdateNode
 		default:
 			return nil, fmt.Errorf("unknown input: %s", tok)
 		}
@@ -159,13 +159,13 @@ func ConfChangesToString(ccs []ConfChangeSingle) string {
 			buf.WriteByte(' ')
 		}
 		switch cc.Type {
-		case ConfChangeAddNode:
+		case ConfChangeType_ConfChangeAddNode:
 			buf.WriteByte('v')
-		case ConfChangeAddLearnerNode:
+		case ConfChangeType_ConfChangeAddLearnerNode:
 			buf.WriteByte('l')
-		case ConfChangeRemoveNode:
+		case ConfChangeType_ConfChangeRemoveNode:
 			buf.WriteByte('r')
-		case ConfChangeUpdateNode:
+		case ConfChangeType_ConfChangeUpdateNode:
 			buf.WriteByte('u')
 		default:
 			buf.WriteString("unknown")

@@ -27,7 +27,7 @@ import (
 func (env *InteractionEnv) handleProposeConfChange(t *testing.T, d datadriven.TestData) error {
 	idx := firstAsNodeIdx(t, d)
 	var v1 bool
-	transition := raftpb.ConfChangeTransitionAuto
+	transition := raftpb.ConfChangeTransition_ConfChangeTransitionAuto
 	for _, arg := range d.CmdArgs[1:] {
 		for _, val := range arg.Vals {
 			switch arg.Key {
@@ -40,11 +40,11 @@ func (env *InteractionEnv) handleProposeConfChange(t *testing.T, d datadriven.Te
 			case "transition":
 				switch val {
 				case "auto":
-					transition = raftpb.ConfChangeTransitionAuto
+					transition = raftpb.ConfChangeTransition_ConfChangeTransitionAuto
 				case "implicit":
-					transition = raftpb.ConfChangeTransitionJointImplicit
+					transition = raftpb.ConfChangeTransition_ConfChangeTransitionJointImplicit
 				case "explicit":
-					transition = raftpb.ConfChangeTransitionJointExplicit
+					transition = raftpb.ConfChangeTransition_ConfChangeTransitionJointExplicit
 				default:
 					return fmt.Errorf("unknown transition %s", val)
 				}
@@ -61,7 +61,7 @@ func (env *InteractionEnv) handleProposeConfChange(t *testing.T, d datadriven.Te
 
 	var c raftpb.ConfChangeI
 	if v1 {
-		if len(ccs) > 1 || transition != raftpb.ConfChangeTransitionAuto {
+		if len(ccs) > 1 || transition != raftpb.ConfChangeTransition_ConfChangeTransitionAuto {
 			return fmt.Errorf("v1 conf change can only have one operation and no transition")
 		}
 		c = raftpb.ConfChange{

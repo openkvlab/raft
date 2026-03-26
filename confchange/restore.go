@@ -56,7 +56,7 @@ func toConfChangeSingle(cs pb.ConfState) (out []pb.ConfChangeSingle, in []pb.Con
 		// If there are outgoing voters, first add them one by one so that the
 		// (non-joint) config has them all.
 		out = append(out, pb.ConfChangeSingle{
-			Type:   pb.ConfChangeAddNode,
+			Type:   pb.ConfChangeType_ConfChangeAddNode,
 			NodeID: id,
 		})
 
@@ -68,20 +68,20 @@ func toConfChangeSingle(cs pb.ConfState) (out []pb.ConfChangeSingle, in []pb.Con
 	// First, we'll remove all of the outgoing voters.
 	for _, id := range cs.VotersOutgoing {
 		in = append(in, pb.ConfChangeSingle{
-			Type:   pb.ConfChangeRemoveNode,
+			Type:   pb.ConfChangeType_ConfChangeRemoveNode,
 			NodeID: id,
 		})
 	}
 	// Then we'll add the incoming voters and learners.
 	for _, id := range cs.Voters {
 		in = append(in, pb.ConfChangeSingle{
-			Type:   pb.ConfChangeAddNode,
+			Type:   pb.ConfChangeType_ConfChangeAddNode,
 			NodeID: id,
 		})
 	}
 	for _, id := range cs.Learners {
 		in = append(in, pb.ConfChangeSingle{
-			Type:   pb.ConfChangeAddLearnerNode,
+			Type:   pb.ConfChangeType_ConfChangeAddLearnerNode,
 			NodeID: id,
 		})
 	}
@@ -89,7 +89,7 @@ func toConfChangeSingle(cs pb.ConfState) (out []pb.ConfChangeSingle, in []pb.Con
 	// are currently voters in the outgoing config.
 	for _, id := range cs.LearnersNext {
 		in = append(in, pb.ConfChangeSingle{
-			Type:   pb.ConfChangeAddLearnerNode,
+			Type:   pb.ConfChangeType_ConfChangeAddLearnerNode,
 			NodeID: id,
 		})
 	}

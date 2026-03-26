@@ -61,13 +61,13 @@ func TestConfChangeDataDriven(t *testing.T) {
 				var cc pb.ConfChangeSingle
 				switch tok[0] {
 				case 'v':
-					cc.Type = pb.ConfChangeAddNode
+					cc.Type = pb.ConfChangeType_ConfChangeAddNode
 				case 'l':
-					cc.Type = pb.ConfChangeAddLearnerNode
+					cc.Type = pb.ConfChangeType_ConfChangeAddLearnerNode
 				case 'r':
-					cc.Type = pb.ConfChangeRemoveNode
+					cc.Type = pb.ConfChangeType_ConfChangeRemoveNode
 				case 'u':
-					cc.Type = pb.ConfChangeUpdateNode
+					cc.Type = pb.ConfChangeType_ConfChangeUpdateNode
 				default:
 					return fmt.Sprintf("unknown input: %s", tok)
 				}
