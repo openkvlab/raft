@@ -31,29 +31,29 @@ func TestProtoMemorySizes(t *testing.T) {
 	}
 
 	var e Entry
-	assert.Equal(t, if64Bit(48, 32), unsafe.Sizeof(e), "Entry size check")
+	assert.Equal(t, if64Bit(80, 48), unsafe.Sizeof(e), "Entry size check")
 
 	var sm SnapshotMetadata
-	assert.Equal(t, if64Bit(120, 68), unsafe.Sizeof(sm), "SnapshotMetadata size check")
+	assert.Equal(t, if64Bit(184, 100), unsafe.Sizeof(sm), "SnapshotMetadata size check")
 
 	var s Snapshot
-	assert.Equal(t, if64Bit(144, 80), unsafe.Sizeof(s), "Snapshot size check")
+	assert.Equal(t, if64Bit(240, 128), unsafe.Sizeof(s), "Snapshot size check")
 
 	var m Message
-	assert.Equal(t, if64Bit(160, 112), unsafe.Sizeof(m), "Message size check")
+	assert.Equal(t, if64Bit(192, 128), unsafe.Sizeof(m), "Message size check")
 
 	var hs HardState
-	assert.Equal(t, uintptr(24), unsafe.Sizeof(hs), "HardState size check")
+	assert.Equal(t, if64Bit(56, 40), unsafe.Sizeof(hs), "HardState size check")
 
 	var cs ConfState
-	assert.Equal(t, if64Bit(104, 52), unsafe.Sizeof(cs), "ConfState size check")
+	assert.Equal(t, if64Bit(136, 68), unsafe.Sizeof(cs), "ConfState size check")
 
 	var cc ConfChange
-	assert.Equal(t, if64Bit(48, 32), unsafe.Sizeof(cc), "ConfChange size check")
+	assert.Equal(t, if64Bit(80, 48), unsafe.Sizeof(cc), "ConfChange size check")
 
 	var ccs ConfChangeSingle
-	assert.Equal(t, if64Bit(16, 12), unsafe.Sizeof(ccs), "ConfChangeSingle size check")
+	assert.Equal(t, if64Bit(48, 28), unsafe.Sizeof(ccs), "ConfChangeSingle size check")
 
 	var ccv2 ConfChangeV2
-	assert.Equal(t, if64Bit(56, 28), unsafe.Sizeof(ccv2), "ConfChangeV2 size check")
+	assert.Equal(t, if64Bit(88, 44), unsafe.Sizeof(ccv2), "ConfChangeV2 size check")
 }
