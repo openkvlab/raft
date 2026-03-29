@@ -132,7 +132,7 @@ The total state machine handling loop will look something like this:
 	    }
 	    for _, entry := range rd.CommittedEntries {
 	      process(entry)
-	      if entry.Type == raftpb.EntryConfChange {
+	      if entry.GetType() == raftpb.EntryConfChange {
 	        var cc raftpb.ConfChange
 	        cc.Unmarshal(entry.Data)
 	        s.Node.ApplyConfChange(cc)
@@ -244,7 +244,7 @@ application to the local state machine (apply). Those will look something like:
 	    case m := <-toApply:
 	      for _, entry := range m.CommittedEntries {
 	        process(entry)
-	        if entry.Type == raftpb.EntryConfChange {
+	        if entry.GetType() == raftpb.EntryConfChange {
 	          var cc raftpb.ConfChange
 	          cc.Unmarshal(entry.Data)
 	          s.Node.ApplyConfChange(cc)

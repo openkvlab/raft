@@ -216,7 +216,7 @@ func traceCommit(r *raft) {
 
 func traceReplicate(r *raft, es ...raftpb.Entry) {
 	for i := range es {
-		if es[i].Type == raftpb.EntryNormal {
+		if es[i].GetType() == raftpb.EntryNormal {
 			traceNodeEvent(rsmReplicate, r)
 		}
 	}

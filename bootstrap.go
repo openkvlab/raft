@@ -56,7 +56,7 @@ func (rn *RawNode) Bootstrap(peers []Peer) error {
 			return err
 		}
 
-		ents[i] = pb.Entry{Type: pb.EntryType_EntryConfChange, Term: 1, Index: uint64(i + 1), Data: data}
+		ents[i] = pb.Entry{Type: pb.EntryType_EntryConfChange.Enum(), Term: new(uint64(1)), Index: new(uint64(i + 1)), Data: data}
 	}
 	rn.raft.raftLog.append(ents...)
 
