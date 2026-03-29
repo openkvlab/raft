@@ -31,7 +31,7 @@ func TestProtoMemorySizes(t *testing.T) {
 	}
 
 	var e Entry
-	assert.Equal(t, if64Bit(80, 48), unsafe.Sizeof(e), "Entry size check")
+	assert.Equal(t, if64Bit(80, 40), unsafe.Sizeof(e), "Entry size check")
 
 	var sm SnapshotMetadata
 	assert.Equal(t, if64Bit(184, 100), unsafe.Sizeof(sm), "SnapshotMetadata size check")

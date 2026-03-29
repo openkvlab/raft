@@ -215,7 +215,7 @@ func DescribeEntry(e pb.Entry, f EntryFormatter) string {
 	}
 
 	var formatted string
-	switch e.Type {
+	switch e.GetType() {
 	case pb.EntryType_EntryNormal:
 		formatted = f(e.Data)
 	case pb.EntryType_EntryConfChange:
@@ -236,7 +236,7 @@ func DescribeEntry(e pb.Entry, f EntryFormatter) string {
 	if formatted != "" {
 		formatted = " " + formatted
 	}
-	return fmt.Sprintf("%d/%d %s%s", e.Term, e.Index, e.Type, formatted)
+	return fmt.Sprintf("%d/%d %s%s", e.GetTerm(), e.GetIndex(), e.GetType(), formatted)
 }
 
 // DescribeEntries calls DescribeEntry for each Entry, adding a newline to

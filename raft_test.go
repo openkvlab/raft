@@ -200,12 +200,12 @@ func TestProgressFlowControl(t *testing.T) {
 		if len(last) == 0 {
 			return index
 		}
-		return last[len(last)-1].Index
+		return last[len(last)-1].GetIndex()
 	}
 
 	// When this append is acked, we change to replicate state and can
 	// send multiple messages at once.
-	index := ackAndVerify(ms[0].Entries[1].Index, 2, 2, 2)
+	index := ackAndVerify(ms[0].Entries[1].GetIndex(), 2, 2, 2)
 	// Ack all three of those messages together and get another 3 messages. The
 	// third message contains a single large entry, in contrast to 2 before.
 	index = ackAndVerify(index, 2, 1, 1)
@@ -497,8 +497,8 @@ func testLeaderElectionOverwriteNewerLogs(t *testing.T, preVote bool) {
 		sm := n.peers[i].(*raft)
 		entries := sm.raftLog.allEntries()
 		require.Len(t, entries, 2)
-		assert.Equal(t, uint64(1), entries[0].Term)
-		assert.Equal(t, uint64(3), entries[1].Term)
+		assert.Equal(t, uint64(1), entries[0].GetTerm())
+		assert.Equal(t, uint64(3), entries[1].GetTerm())
 	}
 }
 
@@ -856,7 +856,7 @@ func TestCandidateConcede(t *testing.T) {
 	assert.Equal(t, uint64(1), a.Term)
 
 	wantLog := ltoa(newLog(&MemoryStorage{
-		ents: []pb.Entry{{}, {Data: nil, Term: 1, Index: 1}, {Term: 1, Index: 2, Data: data}},
+		ents: []pb.Entry{{}, {Data: nil, Term: new(uint64(1)), Index: new(uint64(1))}, {Term: new(uint64(1)), Index: new(uint64(2)), Data: data}},
 	}, nil))
 	for i, p := range tt.peers {
 		if sm, ok := p.(*raft); ok {
@@ -947,7 +947,7 @@ func TestProposal(t *testing.T) {
 		wantLog := newLog(NewMemoryStorage(), raftLogger)
 		if tt.success {
 			wantLog = newLog(&MemoryStorage{
-				ents: []pb.Entry{{}, {Data: nil, Term: 1, Index: 1}, {Term: 1, Index: 2, Data: data}},
+				ents: []pb.Entry{{}, {Data: nil, Term: new(uint64(1)), Index: new(uint64(1))}, {Term: new(uint64(1)), Index: new(uint64(2)), Data: data}},
 			}, nil)
 		}
 		base := ltoa(wantLog)
@@ -978,7 +978,7 @@ func TestProposalByProxy(t *testing.T) {
 		tt.send(pb.Message{From: 2, To: 2, Type: pb.MessageType_MsgProp, Entries: []pb.Entry{{Data: []byte("somedata")}}})
 
 		wantLog := newLog(&MemoryStorage{
-			ents: []pb.Entry{{}, {Data: nil, Term: 1, Index: 1}, {Term: 1, Data: data, Index: 2}},
+			ents: []pb.Entry{{}, {Data: nil, Term: new(uint64(1)), Index: new(uint64(1))}, {Term: new(uint64(1)), Data: data, Index: new(uint64(2))}},
 		}, nil)
 		base := ltoa(wantLog)
 		for i, p := range tt.peers {
@@ -1106,16 +1106,16 @@ func TestHandleMsgApp(t *testing.T) {
 
 		// Ensure 2
 		{pb.Message{Type: pb.MessageType_MsgApp, Term: 2, LogTerm: 1, Index: 1, Commit: 1}, 2, 1, false},
-		{pb.Message{Type: pb.MessageType_MsgApp, Term: 2, LogTerm: 0, Index: 0, Commit: 1, Entries: []pb.Entry{{Index: 1, Term: 2}}}, 1, 1, false},
-		{pb.Message{Type: pb.MessageType_MsgApp, Term: 2, LogTerm: 2, Index: 2, Commit: 3, Entries: []pb.Entry{{Index: 3, Term: 2}, {Index: 4, Term: 2}}}, 4, 3, false},
-		{pb.Message{Type: pb.MessageType_MsgApp, Term: 2, LogTerm: 2, Index: 2, Commit: 4, Entries: []pb.Entry{{Index: 3, Term: 2}}}, 3, 3, false},
-		{pb.Message{Type: pb.MessageType_MsgApp, Term: 2, LogTerm: 1, Index: 1, Commit: 4, Entries: []pb.Entry{{Index: 2, Term: 2}}}, 2, 2, false},
+		{pb.Message{Type: pb.MessageType_MsgApp, Term: 2, LogTerm: 0, Index: 0, Commit: 1, Entries: []pb.Entry{{Index: new(uint64(1)), Term: new(uint64(2))}}}, 1, 1, false},
+		{pb.Message{Type: pb.MessageType_MsgApp, Term: 2, LogTerm: 2, Index: 2, Commit: 3, Entries: []pb.Entry{{Index: new(uint64(3)), Term: new(uint64(2))}, {Index: new(uint64(4)), Term: new(uint64(2))}}}, 4, 3, false},
+		{pb.Message{Type: pb.MessageType_MsgApp, Term: 2, LogTerm: 2, Index: 2, Commit: 4, Entries: []pb.Entry{{Index: new(uint64(3)), Term: new(uint64(2))}}}, 3, 3, false},
+		{pb.Message{Type: pb.MessageType_MsgApp, Term: 2, LogTerm: 1, Index: 1, Commit: 4, Entries: []pb.Entry{{Index: new(uint64(2)), Term: new(uint64(2))}}}, 2, 2, false},
 
 		// Ensure 3
-		{pb.Message{Type: pb.MessageType_MsgApp, Term: 1, LogTerm: 1, Index: 1, Commit: 3}, 2, 1, false},                                           // match entry 1, commit up to last new entry 1
-		{pb.Message{Type: pb.MessageType_MsgApp, Term: 1, LogTerm: 1, Index: 1, Commit: 3, Entries: []pb.Entry{{Index: 2, Term: 2}}}, 2, 2, false}, // match entry 1, commit up to last new entry 2
-		{pb.Message{Type: pb.MessageType_MsgApp, Term: 2, LogTerm: 2, Index: 2, Commit: 3}, 2, 2, false},                                           // match entry 2, commit up to last new entry 2
-		{pb.Message{Type: pb.MessageType_MsgApp, Term: 2, LogTerm: 2, Index: 2, Commit: 4}, 2, 2, false},                                           // commit up to log.last()
+		{pb.Message{Type: pb.MessageType_MsgApp, Term: 1, LogTerm: 1, Index: 1, Commit: 3}, 2, 1, false},                                                                     // match entry 1, commit up to last new entry 1
+		{pb.Message{Type: pb.MessageType_MsgApp, Term: 1, LogTerm: 1, Index: 1, Commit: 3, Entries: []pb.Entry{{Index: new(uint64(2)), Term: new(uint64(2))}}}, 2, 2, false}, // match entry 1, commit up to last new entry 2
+		{pb.Message{Type: pb.MessageType_MsgApp, Term: 2, LogTerm: 2, Index: 2, Commit: 3}, 2, 2, false},                                                                     // match entry 2, commit up to last new entry 2
+		{pb.Message{Type: pb.MessageType_MsgApp, Term: 2, LogTerm: 2, Index: 2, Commit: 4}, 2, 2, false},                                                                     // commit up to log.last()
 	}
 
 	for i, tt := range tests {
@@ -1256,7 +1256,7 @@ func TestMsgAppRespWaitReset(t *testing.T) {
 	assert.Equal(t, pb.MessageType_MsgApp, msgs[0].Type)
 	assert.Equal(t, uint64(2), msgs[0].To)
 	assert.Len(t, msgs[0].Entries, 1)
-	assert.Equal(t, uint64(2), msgs[0].Entries[0].Index)
+	assert.Equal(t, uint64(2), msgs[0].Entries[0].GetIndex())
 
 	// Now Node 3 acks the first entry. This releases the wait and entry 2 is sent.
 	sm.Step(pb.Message{
@@ -1269,7 +1269,7 @@ func TestMsgAppRespWaitReset(t *testing.T) {
 	assert.Equal(t, pb.MessageType_MsgApp, msgs[0].Type)
 	assert.Equal(t, uint64(3), msgs[0].To)
 	assert.Len(t, msgs[0].Entries, 1)
-	assert.Equal(t, uint64(2), msgs[0].Entries[0].Index)
+	assert.Equal(t, uint64(2), msgs[0].Entries[0].GetIndex())
 }
 
 func TestRecvMsgVote(t *testing.T) {
@@ -2259,7 +2259,7 @@ func TestBcastBeat(t *testing.T) {
 	sm.becomeCandidate()
 	sm.becomeLeader()
 	for i := 0; i < 10; i++ {
-		mustAppendEntry(sm, pb.Entry{Index: uint64(i) + 1})
+		mustAppendEntry(sm, pb.Entry{Index: new(uint64(i) + 1)})
 	}
 	sm.advanceMessagesAfterAppend()
 
@@ -2750,7 +2750,7 @@ func TestStepConfig(t *testing.T) {
 	r.becomeCandidate()
 	r.becomeLeader()
 	index := r.raftLog.lastIndex()
-	r.Step(pb.Message{From: 1, To: 1, Type: pb.MessageType_MsgProp, Entries: []pb.Entry{{Type: pb.EntryType_EntryConfChange}}})
+	r.Step(pb.Message{From: 1, To: 1, Type: pb.MessageType_MsgProp, Entries: []pb.Entry{{Type: pb.EntryType_EntryConfChange.Enum()}}})
 	assert.Equal(t, index+1, r.raftLog.lastIndex())
 	assert.Equal(t, index+1, r.pendingConfIndex)
 }
@@ -2763,11 +2763,11 @@ func TestStepIgnoreConfig(t *testing.T) {
 	r := newTestRaft(1, 10, 1, newTestMemoryStorage(withPeers(1, 2)))
 	r.becomeCandidate()
 	r.becomeLeader()
-	r.Step(pb.Message{From: 1, To: 1, Type: pb.MessageType_MsgProp, Entries: []pb.Entry{{Type: pb.EntryType_EntryConfChange}}})
+	r.Step(pb.Message{From: 1, To: 1, Type: pb.MessageType_MsgProp, Entries: []pb.Entry{{Type: pb.EntryType_EntryConfChange.Enum()}}})
 	index := r.raftLog.lastIndex()
 	pendingConfIndex := r.pendingConfIndex
-	r.Step(pb.Message{From: 1, To: 1, Type: pb.MessageType_MsgProp, Entries: []pb.Entry{{Type: pb.EntryType_EntryConfChange}}})
-	wents := []pb.Entry{{Type: pb.EntryType_EntryNormal, Term: 1, Index: 3, Data: nil}}
+	r.Step(pb.Message{From: 1, To: 1, Type: pb.MessageType_MsgProp, Entries: []pb.Entry{{Type: pb.EntryType_EntryConfChange.Enum()}}})
+	wents := []pb.Entry{{Type: pb.EntryType_EntryNormal.Enum(), Term: new(uint64(1)), Index: new(uint64(3)), Data: nil}}
 	ents, err := r.raftLog.entries(index+1, noLimit)
 	require.NoError(t, err)
 	assert.Equal(t, wents, ents)
@@ -2787,7 +2787,7 @@ func TestNewLeaderPendingConfig(t *testing.T) {
 	for i, tt := range tests {
 		r := newTestRaft(1, 10, 1, newTestMemoryStorage(withPeers(1, 2)))
 		if tt.addEntry {
-			mustAppendEntry(r, pb.Entry{Type: pb.EntryType_EntryNormal})
+			mustAppendEntry(r, pb.Entry{Type: pb.EntryType_EntryNormal.Enum()})
 		}
 		r.becomeCandidate()
 		r.becomeLeader()
@@ -2973,7 +2973,7 @@ func TestCommitAfterRemoveNode(t *testing.T) {
 	r.Step(pb.Message{
 		Type: pb.MessageType_MsgProp,
 		Entries: []pb.Entry{
-			{Type: pb.EntryType_EntryConfChange, Data: ccData},
+			{Type: pb.EntryType_EntryConfChange.Enum(), Data: ccData},
 		},
 	})
 
@@ -2985,7 +2985,7 @@ func TestCommitAfterRemoveNode(t *testing.T) {
 	r.Step(pb.Message{
 		Type: pb.MessageType_MsgProp,
 		Entries: []pb.Entry{
-			{Type: pb.EntryType_EntryNormal, Data: []byte("hello")},
+			{Type: pb.EntryType_EntryNormal.Enum(), Data: []byte("hello")},
 		},
 	})
 
@@ -2997,16 +2997,16 @@ func TestCommitAfterRemoveNode(t *testing.T) {
 	})
 	ents := nextEnts(r, s)
 	require.Len(t, ents, 2)
-	require.Equal(t, pb.EntryType_EntryNormal, ents[0].Type)
+	require.Equal(t, pb.EntryType_EntryNormal, ents[0].GetType())
 	require.Nil(t, ents[0].Data)
-	require.Equal(t, pb.EntryType_EntryConfChange, ents[1].Type)
+	require.Equal(t, pb.EntryType_EntryConfChange, ents[1].GetType())
 
 	// Apply the config change. This reduces quorum requirements so the
 	// pending command can now commit.
 	r.applyConfChange(cc.AsV2())
 	ents = nextEnts(r, s)
 	require.Len(t, ents, 1)
-	require.Equal(t, pb.EntryType_EntryNormal, ents[0].Type)
+	require.Equal(t, pb.EntryType_EntryNormal, ents[0].GetType())
 	require.Equal(t, []byte("hello"), ents[0].Data)
 }
 
@@ -3689,7 +3689,7 @@ func testConfChangeCheckBeforeCampaign(t *testing.T, v2 bool) {
 		To:   1,
 		Type: pb.MessageType_MsgProp,
 		Entries: []pb.Entry{
-			{Type: ty, Data: ccData},
+			{Type: ty.Enum(), Data: ccData},
 		},
 	})
 
@@ -3857,8 +3857,8 @@ func TestFastLogRejection(t *testing.T) {
 			s1.Append(test.leaderLog)
 			last := test.leaderLog[len(test.leaderLog)-1]
 			s1.SetHardState(pb.HardState{
-				Term:   last.Term - 1,
-				Commit: last.Index,
+				Term:   last.GetTerm() - 1,
+				Commit: last.GetIndex(),
 			})
 			n1 := newTestRaft(1, 10, 1, s1)
 			n1.becomeCandidate() // bumps Term to last.Term
@@ -3868,7 +3868,7 @@ func TestFastLogRejection(t *testing.T) {
 			s2.snapshot.Metadata.ConfState = pb.ConfState{Voters: []uint64{1, 2, 3}}
 			s2.Append(test.followerLog)
 			s2.SetHardState(pb.HardState{
-				Term:   last.Term,
+				Term:   last.GetTerm(),
 				Vote:   1,
 				Commit: 0,
 			})
@@ -3909,7 +3909,7 @@ func TestFastLogRejection(t *testing.T) {
 func entsWithConfig(configFunc func(*Config), terms ...uint64) *raft {
 	storage := NewMemoryStorage()
 	for i, term := range terms {
-		storage.Append([]pb.Entry{{Index: uint64(i + 1), Term: term}})
+		storage.Append([]pb.Entry{{Index: new(uint64(i + 1)), Term: new(term)}})
 	}
 	cfg := newTestConfig(1, 5, 1, storage)
 	if configFunc != nil {

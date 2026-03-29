@@ -813,8 +813,8 @@ func (r *raft) reset(term uint64) {
 func (r *raft) appendEntry(es ...pb.Entry) (accepted bool) {
 	li := r.raftLog.lastIndex()
 	for i := range es {
-		es[i].Term = r.Term
-		es[i].Index = li + 1 + uint64(i)
+		es[i].Term = new(r.Term)
+		es[i].Index = new(li + 1 + uint64(i))
 	}
 	// Track the size of this uncommitted proposal.
 	if !r.increaseUncommittedSize(es) {
@@ -1006,7 +1006,7 @@ func (r *raft) hasUnappliedConfChanges() bool {
 	pageSize := r.raftLog.maxApplyingEntsSize
 	if err := r.raftLog.scan(lo, hi, pageSize, func(ents []pb.Entry) error {
 		for i := range ents {
-			if ents[i].Type == pb.EntryType_EntryConfChange || ents[i].Type == pb.EntryType_EntryConfChangeV2 {
+			if ents[i].GetType() == pb.EntryType_EntryConfChange || ents[i].GetType() == pb.EntryType_EntryConfChangeV2 {
 				found = true
 				return errBreak
 			}
@@ -1194,7 +1194,7 @@ func (r *raft) Step(m pb.Message) error {
 
 	case pb.MessageType_MsgStorageApplyResp:
 		if len(m.Entries) > 0 {
-			index := m.Entries[len(m.Entries)-1].Index
+			index := m.Entries[len(m.Entries)-1].GetIndex()
 			r.appliedTo(index, entsSize(m.Entries))
 			r.reduceUncommittedSize(payloadsSize(m.Entries))
 		}
@@ -1299,13 +1299,13 @@ func stepLeader(r *raft, m pb.Message) error {
 		for i := range m.Entries {
 			e := &m.Entries[i]
 			var cc pb.ConfChangeI
-			if e.Type == pb.EntryType_EntryConfChange {
+			if e.GetType() == pb.EntryType_EntryConfChange {
 				var ccc pb.ConfChange
 				if err := ccc.Unmarshal(e.Data); err != nil {
 					panic(err)
 				}
 				cc = ccc
-			} else if e.Type == pb.EntryType_EntryConfChangeV2 {
+			} else if e.GetType() == pb.EntryType_EntryConfChangeV2 {
 				var ccc pb.ConfChangeV2
 				if err := ccc.Unmarshal(e.Data); err != nil {
 					panic(err)
@@ -1328,7 +1328,7 @@ func stepLeader(r *raft, m pb.Message) error {
 
 				if failedCheck != "" && !r.disableConfChangeValidation {
 					r.logger.Infof("%x ignoring conf change %v at config %s: %s", r.id, cc, r.trk.Config, failedCheck)
-					m.Entries[i] = pb.Entry{Type: pb.EntryType_EntryNormal}
+					m.Entries[i] = pb.Entry{Type: pb.EntryType_EntryNormal.Enum()}
 				} else {
 					r.pendingConfIndex = r.raftLog.lastIndex() + uint64(i) + 1
 					traceChangeConfEvent(cc, r)

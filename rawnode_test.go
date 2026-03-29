@@ -80,7 +80,7 @@ func TestRawNodeStep(t *testing.T) {
 		t.Run(msgn, func(t *testing.T) {
 			s := NewMemoryStorage()
 			s.SetHardState(pb.HardState{Term: 1, Commit: 1})
-			s.Append([]pb.Entry{{Term: 1, Index: 1}})
+			s.Append([]pb.Entry{{Term: new(uint64(1)), Index: new(uint64(1))}})
 			require.NoError(t, s.ApplySnapshot(pb.Snapshot{Metadata: pb.SnapshotMetadata{
 				ConfState: pb.ConfState{
 					Voters: []uint64{1},
@@ -239,11 +239,11 @@ func TestRawNodeProposeAndConfChange(t *testing.T) {
 				s.Append(rd.Entries)
 				for _, ent := range rd.CommittedEntries {
 					var cc pb.ConfChangeI
-					if ent.Type == pb.EntryType_EntryConfChange {
+					if ent.GetType() == pb.EntryType_EntryConfChange {
 						var ccc pb.ConfChange
 						require.NoError(t, ccc.Unmarshal(ent.Data))
 						cc = ccc
-					} else if ent.Type == pb.EntryType_EntryConfChangeV2 {
+					} else if ent.GetType() == pb.EntryType_EntryConfChangeV2 {
 						var ccc pb.ConfChangeV2
 						require.NoError(t, ccc.Unmarshal(ent.Data))
 						cc = ccc
@@ -286,7 +286,7 @@ func TestRawNodeProposeAndConfChange(t *testing.T) {
 			if _, ok := tc.cc.AsV1(); !ok {
 				typ = pb.EntryType_EntryConfChangeV2
 			}
-			require.Equal(t, typ, entries[1].Type)
+			require.Equal(t, typ, entries[1].GetType())
 			assert.Equal(t, ccdata, entries[1].Data)
 
 			require.Equal(t, &tc.exp, cs)
@@ -323,7 +323,7 @@ func TestRawNodeProposeAndConfChange(t *testing.T) {
 
 			// Check that the right ConfChange comes out.
 			require.Len(t, rd.Entries, 1)
-			require.Equal(t, pb.EntryType_EntryConfChangeV2, rd.Entries[0].Type)
+			require.Equal(t, pb.EntryType_EntryConfChangeV2, rd.Entries[0].GetType())
 			var cc pb.ConfChangeV2
 			require.NoError(t, cc.Unmarshal(rd.Entries[0].Data))
 			require.Equal(t, pb.ConfChangeV2{Context: context}, cc)
@@ -370,7 +370,7 @@ func TestRawNodeJointAutoLeave(t *testing.T) {
 		s.Append(rd.Entries)
 		for _, ent := range rd.CommittedEntries {
 			var cc pb.ConfChangeI
-			if ent.Type == pb.EntryType_EntryConfChangeV2 {
+			if ent.GetType() == pb.EntryType_EntryConfChangeV2 {
 				var ccc pb.ConfChangeV2
 				require.NoError(t, ccc.Unmarshal(ent.Data))
 				cc = &ccc
@@ -403,7 +403,7 @@ func TestRawNodeJointAutoLeave(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, entries, 2)
 	assert.Equal(t, []byte("somedata"), entries[0].Data)
-	require.Equal(t, pb.EntryType_EntryConfChangeV2, entries[1].Type)
+	require.Equal(t, pb.EntryType_EntryConfChangeV2, entries[1].GetType())
 	assert.Equal(t, ccdata, entries[1].Data)
 
 	require.Equal(t, &expCs, cs)
@@ -434,7 +434,7 @@ func TestRawNodeJointAutoLeave(t *testing.T) {
 	s.Append(rd.Entries)
 	// Check that the right ConfChange comes out.
 	require.Len(t, rd.Entries, 1)
-	require.Equal(t, pb.EntryType_EntryConfChangeV2, rd.Entries[0].Type)
+	require.Equal(t, pb.EntryType_EntryConfChangeV2, rd.Entries[0].GetType())
 	var cc pb.ConfChangeV2
 	require.NoError(t, cc.Unmarshal(rd.Entries[0].Data))
 	require.Equal(t, pb.ConfChangeV2{Context: nil}, cc)
@@ -471,7 +471,7 @@ func TestRawNodeProposeAddDuplicateNode(t *testing.T) {
 		rd = rawNode.Ready()
 		s.Append(rd.Entries)
 		for _, entry := range rd.CommittedEntries {
-			if entry.Type == pb.EntryType_EntryConfChange {
+			if entry.GetType() == pb.EntryType_EntryConfChange {
 				var cc pb.ConfChange
 				cc.Unmarshal(entry.Data)
 				rawNode.ApplyConfChange(cc)
@@ -566,8 +566,8 @@ func TestRawNodeReadIndex(t *testing.T) {
 // and will not create faux configuration change entries.
 func TestRawNodeStart(t *testing.T) {
 	entries := []pb.Entry{
-		{Term: 1, Index: 2, Data: nil},           // empty entry
-		{Term: 1, Index: 3, Data: []byte("foo")}, // non-empty entry
+		{Term: new(uint64(1)), Index: new(uint64(2)), Data: nil},           // empty entry
+		{Term: new(uint64(1)), Index: new(uint64(3)), Data: []byte("foo")}, // non-empty entry
 	}
 	want := Ready{
 		SoftState:        &SoftState{Lead: 1, RaftState: StateLeader},
@@ -578,7 +578,7 @@ func TestRawNodeStart(t *testing.T) {
 	}
 
 	storage := NewMemoryStorage()
-	storage.ents[0].Index = 1
+	storage.ents[0].Index = new(uint64(1))
 
 	// TODO(tbg): this is a first prototype of what bootstrapping could look
 	// like (without the annoying faux ConfChanges). We want to persist a
@@ -657,8 +657,8 @@ func TestRawNodeStart(t *testing.T) {
 
 func TestRawNodeRestart(t *testing.T) {
 	entries := []pb.Entry{
-		{Term: 1, Index: 1},
-		{Term: 1, Index: 2, Data: []byte("foo")},
+		{Term: new(uint64(1)), Index: new(uint64(1))},
+		{Term: new(uint64(1)), Index: new(uint64(2)), Data: []byte("foo")},
 	}
 	st := pb.HardState{Term: 1, Commit: 1}
 
@@ -689,7 +689,7 @@ func TestRawNodeRestartFromSnapshot(t *testing.T) {
 		},
 	}
 	entries := []pb.Entry{
-		{Term: 1, Index: 3, Data: []byte("foo")},
+		{Term: new(uint64(1)), Index: new(uint64(3)), Data: []byte("foo")},
 	}
 	st := pb.HardState{Term: 1, Commit: 3}
 
@@ -767,9 +767,9 @@ func TestRawNodeCommitPaginationAfterRestart(t *testing.T) {
 	var size uint64
 	for i := range s.ents {
 		ent := pb.Entry{
-			Term:  1,
-			Index: uint64(i + 1),
-			Type:  pb.EntryType_EntryNormal,
+			Term:  new(uint64(1)),
+			Index: new(uint64(i + 1)),
+			Type:  pb.EntryType_EntryNormal.Enum(),
 			Data:  []byte("a"),
 		}
 
@@ -784,9 +784,9 @@ func TestRawNodeCommitPaginationAfterRestart(t *testing.T) {
 	cfg.MaxSizePerMsg = size - uint64(s.ents[len(s.ents)-1].Size()) - 1
 
 	s.ents = append(s.ents, pb.Entry{
-		Term:  1,
-		Index: uint64(11),
-		Type:  pb.EntryType_EntryNormal,
+		Term:  new(uint64(1)),
+		Index: new(uint64(11)),
+		Type:  pb.EntryType_EntryNormal.Enum(),
 		Data:  []byte("boom"),
 	})
 
@@ -797,11 +797,11 @@ func TestRawNodeCommitPaginationAfterRestart(t *testing.T) {
 		rd := rawNode.Ready()
 		n := len(rd.CommittedEntries)
 		require.NotZero(t, n, "stopped applying entries at index %d", highestApplied)
-		next := rd.CommittedEntries[0].Index
+		next := rd.CommittedEntries[0].GetIndex()
 		require.False(t, highestApplied != 0 && highestApplied+1 != next,
 			"attempting to apply index %d after index %d, leaving a gap", next, highestApplied)
 
-		highestApplied = rd.CommittedEntries[n-1].Index
+		highestApplied = rd.CommittedEntries[n-1].GetIndex()
 		rawNode.Advance(rd)
 		rawNode.Step(pb.Message{
 			Type:   pb.MessageType_MsgHeartbeat,
@@ -1021,7 +1021,7 @@ func benchmarkRawNodeImpl(b *testing.B, peers ...uint64) {
 				b.Log(DescribeReady(rd, nil))
 			}
 			if n := len(rd.CommittedEntries); n > 0 {
-				applied = rd.CommittedEntries[n-1].Index
+				applied = rd.CommittedEntries[n-1].GetIndex()
 			}
 			s.Append(rd.Entries)
 			for _, m := range rd.Messages {
@@ -1035,7 +1035,7 @@ func benchmarkRawNodeImpl(b *testing.B, peers ...uint64) {
 				if m.Type == pb.MessageType_MsgApp {
 					idx := m.Index
 					if n := len(m.Entries); n > 0 {
-						idx = m.Entries[n-1].Index
+						idx = m.Entries[n-1].GetIndex()
 					}
 					resp := pb.Message{To: m.From, From: m.To, Type: pb.MessageType_MsgAppResp, Term: m.Term, Index: idx}
 					if debug {

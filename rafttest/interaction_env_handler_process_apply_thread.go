@@ -72,7 +72,7 @@ func processApply(n *Node, ents []raftpb.Entry) error {
 	for _, ent := range ents {
 		var update []byte
 		var cs *raftpb.ConfState
-		switch ent.Type {
+		switch ent.GetType() {
 		case raftpb.EntryType_EntryConfChange:
 			var cc raftpb.ConfChange
 			if err := cc.Unmarshal(ent.Data); err != nil {
@@ -98,8 +98,8 @@ func processApply(n *Node, ents []raftpb.Entry) error {
 		snap.Data = append(snap.Data, lastSnap.Data...)
 		// NB: this hard-codes an "appender" state machine.
 		snap.Data = append(snap.Data, update...)
-		snap.Metadata.Index = ent.Index
-		snap.Metadata.Term = ent.Term
+		snap.Metadata.Index = ent.GetIndex()
+		snap.Metadata.Term = ent.GetTerm()
 		if cs == nil {
 			sl := n.History
 			cs = &sl[len(sl)-1].Metadata.ConfState
