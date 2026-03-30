@@ -1301,13 +1301,13 @@ func stepLeader(r *raft, m pb.Message) error {
 			var cc pb.ConfChangeI
 			if e.GetType() == pb.EntryType_EntryConfChange {
 				var ccc pb.ConfChange
-				if err := ccc.Unmarshal(e.Data); err != nil {
+				if err := ccc.Unmarshal(e.GetData()); err != nil {
 					panic(err)
 				}
 				cc = ccc
 			} else if e.GetType() == pb.EntryType_EntryConfChangeV2 {
 				var ccc pb.ConfChangeV2
-				if err := ccc.Unmarshal(e.Data); err != nil {
+				if err := ccc.Unmarshal(e.GetData()); err != nil {
 					panic(err)
 				}
 				cc = ccc
@@ -1763,7 +1763,7 @@ func stepFollower(r *raft, m pb.Message) error {
 			r.logger.Errorf("%x invalid format of MsgReadIndexResp from %x, entries count: %d", r.id, m.From, len(m.Entries))
 			return nil
 		}
-		r.readStates = append(r.readStates, ReadState{Index: m.Index, RequestCtx: m.Entries[0].Data})
+		r.readStates = append(r.readStates, ReadState{Index: m.Index, RequestCtx: m.Entries[0].GetData()})
 	}
 	return nil
 }
@@ -2066,7 +2066,7 @@ func (r *raft) responseToReadIndexReq(req pb.Message, readIndex uint64) pb.Messa
 	if req.From == None || req.From == r.id {
 		r.readStates = append(r.readStates, ReadState{
 			Index:      readIndex,
-			RequestCtx: req.Entries[0].Data,
+			RequestCtx: req.Entries[0].GetData(),
 		})
 		return pb.Message{}
 	}
