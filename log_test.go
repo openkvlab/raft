@@ -877,7 +877,6 @@ func TestSlice(t *testing.T) {
 	num := uint64(100)
 	last := offset + num
 	half := offset + num/2
-	halfe := pb.Entry{Index: new(half), Term: new(half)}
 
 	entries := func(from, to uint64) []pb.Entry {
 		return index(from).termRange(from, to)
@@ -889,6 +888,15 @@ func TestSlice(t *testing.T) {
 	require.NoError(t, storage.Append(entries(offset+1, half)))
 	l := newLog(storage, raftLogger)
 	l.append(entries(half, last)...)
+
+	sizeOfNEntries := func(lo, hi uint64, n int) uint64 {
+		ents, _ := l.slice(lo, hi, noLimit)
+		size := uint64(0)
+		for i := 0; i < n; i++ {
+			size += uint64(ents[i].Size())
+		}
+		return size
+	}
 
 	for _, tt := range []struct {
 		lo  uint64
@@ -924,26 +932,27 @@ func TestSlice(t *testing.T) {
 		{lo: half, hi: last, lim: 0, w: entries(half, half+1)},
 		{lo: half + 1, hi: last, lim: 0, w: entries(half+1, half+2)},
 		// Low limit.
-		{lo: offset + 1, hi: last, lim: uint64(halfe.Size() - 1), w: entries(offset+1, offset+2)},
-		{lo: half - 1, hi: half + 1, lim: uint64(halfe.Size() - 1), w: entries(half-1, half)},
-		{lo: half, hi: last, lim: uint64(halfe.Size() - 1), w: entries(half, half+1)},
+		{lo: offset + 1, hi: last, lim: sizeOfNEntries(offset+1, last, 1) - 1, w: entries(offset+1, offset+2)},
+		{lo: half - 1, hi: half + 1, lim: sizeOfNEntries(half-1, half+1, 1) - 1, w: entries(half-1, half)},
+		{lo: half, hi: last, lim: sizeOfNEntries(half, last, 1) - 1, w: entries(half, half+1)},
 		// Just enough for one limit.
-		{lo: offset + 1, hi: last, lim: uint64(halfe.Size()), w: entries(offset+1, offset+2)},
-		{lo: half - 1, hi: half + 1, lim: uint64(halfe.Size()), w: entries(half-1, half)},
-		{lo: half, hi: last, lim: uint64(halfe.Size()), w: entries(half, half+1)},
+		{lo: offset + 1, hi: last, lim: sizeOfNEntries(offset+1, last, 1), w: entries(offset+1, offset+2)},
+		{lo: half - 1, hi: half + 1, lim: sizeOfNEntries(half-1, half+1, 1), w: entries(half-1, half)},
+		{lo: half, hi: last, lim: sizeOfNEntries(half, last, 1), w: entries(half, half+1)},
 		// Not enough for two limit.
-		{lo: offset + 1, hi: last, lim: uint64(halfe.Size() + 1), w: entries(offset+1, offset+2)},
-		{lo: half - 1, hi: half + 1, lim: uint64(halfe.Size() + 1), w: entries(half-1, half)},
-		{lo: half, hi: last, lim: uint64(halfe.Size() + 1), w: entries(half, half+1)},
+		{lo: offset + 1, hi: last, lim: sizeOfNEntries(offset+1, last, 1) + 1, w: entries(offset+1, offset+2)},
+		{lo: half - 1, hi: half + 1, lim: sizeOfNEntries(half-1, half+1, 1) + 1, w: entries(half-1, half)},
+		{lo: half, hi: last, lim: sizeOfNEntries(half, last, 1) + 1, w: entries(half, half+1)},
 		// Enough for two limit.
-		{lo: offset + 1, hi: last, lim: uint64(halfe.Size() * 2), w: entries(offset+1, offset+3)},
-		{lo: half - 2, hi: half + 1, lim: uint64(halfe.Size() * 2), w: entries(half-2, half)},
-		{lo: half - 1, hi: half + 1, lim: uint64(halfe.Size() * 2), w: entries(half-1, half+1)},
-		{lo: half, hi: last, lim: uint64(halfe.Size() * 2), w: entries(half, half+2)},
+		{lo: offset + 1, hi: last, lim: sizeOfNEntries(offset+1, last, 2), w: entries(offset+1, offset+3)},
+
+		{lo: half - 2, hi: half + 1, lim: sizeOfNEntries(half-2, half+1, 2), w: entries(half-2, half)},
+		{lo: half - 1, hi: half + 1, lim: sizeOfNEntries(half-1, half+1, 2), w: entries(half-1, half+1)},
+		{lo: half, hi: last, lim: sizeOfNEntries(half, last, 2), w: entries(half, half+2)},
 		// Not enough for three.
-		{lo: half - 2, hi: half + 1, lim: uint64(halfe.Size()*3 - 1), w: entries(half-2, half)},
+		{lo: half - 2, hi: half + 1, lim: sizeOfNEntries(half-2, half+1, 3) - 1, w: entries(half-2, half)},
 		// Enough for three.
-		{lo: half - 1, hi: half + 2, lim: uint64(halfe.Size() * 3), w: entries(half-1, half+2)},
+		{lo: half - 1, hi: half + 2, lim: sizeOfNEntries(half-1, half+2, 3), w: entries(half-1, half+2)},
 	} {
 		t.Run("", func(t *testing.T) {
 			defer func() {
