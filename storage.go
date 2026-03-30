@@ -123,7 +123,8 @@ func NewMemoryStorage() *MemoryStorage {
 // InitialState implements the Storage interface.
 func (ms *MemoryStorage) InitialState() (pb.HardState, pb.ConfState, error) {
 	ms.callStats.initialState++
-	return ms.hardState, ms.snapshot.Metadata.ConfState, nil
+	cs := ms.snapshot.Metadata.GetConfState()
+	return ms.hardState, *cs, nil
 }
 
 // SetHardState saves the current HardState.
@@ -242,10 +243,10 @@ func (ms *MemoryStorage) CreateSnapshot(i uint64, cs *pb.ConfState, data []byte)
 		getLogger().Panicf("snapshot %d is out of bound lastindex(%d)", i, ms.lastIndex())
 	}
 
-	ms.snapshot.Metadata.Index = i
-	ms.snapshot.Metadata.Term = ms.ents[i-offset].GetTerm()
+	ms.snapshot.Metadata.Index = new(i)
+	ms.snapshot.Metadata.Term = new(ms.ents[i-offset].GetTerm())
 	if cs != nil {
-		ms.snapshot.Metadata.ConfState = *cs
+		ms.snapshot.Metadata.ConfState = cs
 	}
 	ms.snapshot.Data = data
 	return ms.snapshot, nil

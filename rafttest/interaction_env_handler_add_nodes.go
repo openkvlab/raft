@@ -44,7 +44,9 @@ func (env *InteractionEnv) handleAddNodes(t *testing.T, d datadriven.TestData) e
 			case "inflight":
 				arg.Scan(t, i, &cfg.MaxInflightMsgs)
 			case "index":
-				arg.Scan(t, i, &snap.Metadata.Index)
+				var idx uint64
+				arg.Scan(t, i, &idx)
+				snap.Metadata.Index = new(idx)
 				cfg.Applied = snap.Metadata.GetIndex()
 			case "content":
 				arg.Scan(t, i, &snap.Data)
@@ -114,7 +116,7 @@ func (env *InteractionEnv) AddNodes(n int, cfg raft.Config, snap pb.Snapshot) er
 			if snap.Metadata.GetIndex() <= 1 {
 				return errors.New("index must be specified as > 1 due to bootstrap")
 			}
-			snap.Metadata.Term = 1
+			snap.Metadata.Term = new(uint64(1))
 			if err := s.ApplySnapshot(snap); err != nil {
 				return err
 			}

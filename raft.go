@@ -1870,7 +1870,7 @@ func (r *raft) restore(s pb.Snapshot) bool {
 	// config. This shouldn't ever happen (at the time of writing) but lots of
 	// code here and there assumes that r.id is in the progress tracker.
 	found := false
-	cs := s.Metadata.ConfState
+	cs := s.Metadata.GetConfState()
 
 	for _, set := range [][]uint64{
 		cs.Voters,
@@ -1916,7 +1916,7 @@ func (r *raft) restore(s pb.Snapshot) bool {
 	cfg, trk, err := confchange.Restore(confchange.Changer{
 		Tracker:   r.trk,
 		LastIndex: r.raftLog.lastIndex(),
-	}, cs)
+	}, *cs)
 
 	if err != nil {
 		// This should never happen. Either there's a bug in our config change
@@ -1924,7 +1924,7 @@ func (r *raft) restore(s pb.Snapshot) bool {
 		panic(fmt.Sprintf("unable to restore config %+v: %s", cs, err))
 	}
 
-	assertConfStatesEquivalent(r.logger, cs, r.switchToConfig(cfg, trk))
+	assertConfStatesEquivalent(r.logger, *cs, r.switchToConfig(cfg, trk))
 
 	last := r.raftLog.lastEntryID()
 	r.logger.Infof("%x [commit: %d, lastindex: %d, lastterm: %d] restored snapshot [index: %d, term: %d]",
