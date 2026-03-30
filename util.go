@@ -92,7 +92,10 @@ func DescribeSoftState(ss SoftState) string {
 	return fmt.Sprintf("Lead:%d State:%s", ss.Lead, ss.RaftState)
 }
 
-func DescribeConfState(state pb.ConfState) string {
+func DescribeConfState(state *pb.ConfState) string {
+	if state == nil {
+		state = &pb.ConfState{}
+	}
 	return fmt.Sprintf(
 		"Voters:%v VotersOutgoing:%v Learners:%v LearnersNext:%v AutoLeave:%v",
 		state.Voters, state.VotersOutgoing, state.Learners, state.LearnersNext, state.AutoLeave,
@@ -101,7 +104,7 @@ func DescribeConfState(state pb.ConfState) string {
 
 func DescribeSnapshot(snap pb.Snapshot) string {
 	m := snap.Metadata
-	return fmt.Sprintf("Index:%d Term:%d ConfState:%s", m.Index, m.Term, DescribeConfState(m.ConfState))
+	return fmt.Sprintf("Index:%d Term:%d ConfState:%s", m.GetIndex(), m.Term, DescribeConfState(m.GetConfState()))
 }
 
 func DescribeReady(rd Ready, f EntryFormatter) string {
