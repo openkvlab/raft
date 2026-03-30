@@ -75,20 +75,20 @@ func processApply(n *Node, ents []raftpb.Entry) error {
 		switch ent.GetType() {
 		case raftpb.EntryType_EntryConfChange:
 			var cc raftpb.ConfChange
-			if err := cc.Unmarshal(ent.Data); err != nil {
+			if err := cc.Unmarshal(ent.GetData()); err != nil {
 				return err
 			}
 			update = cc.Context
 			cs = n.RawNode.ApplyConfChange(cc)
 		case raftpb.EntryType_EntryConfChangeV2:
 			var cc raftpb.ConfChangeV2
-			if err := cc.Unmarshal(ent.Data); err != nil {
+			if err := cc.Unmarshal(ent.GetData()); err != nil {
 				return err
 			}
 			cs = n.RawNode.ApplyConfChange(cc)
 			update = cc.Context
 		default:
-			update = ent.Data
+			update = ent.GetData()
 		}
 
 		// Record the new state by starting with the current state and applying

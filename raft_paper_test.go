@@ -788,7 +788,7 @@ func commitNoopEntry(r *raft, s *MemoryStorage) {
 	// simulate the response of MsgApp
 	msgs := r.readMessages()
 	for _, m := range msgs {
-		if m.Type != pb.MessageType_MsgApp || len(m.Entries) != 1 || m.Entries[0].Data != nil {
+		if m.Type != pb.MessageType_MsgApp || len(m.Entries) != 1 || m.Entries[0].GetData() != nil {
 			panic("not a message to append noop entry")
 		}
 		r.Step(acceptAndReply(m))

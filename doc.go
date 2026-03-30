@@ -134,7 +134,7 @@ The total state machine handling loop will look something like this:
 	      process(entry)
 	      if entry.GetType() == raftpb.EntryConfChange {
 	        var cc raftpb.ConfChange
-	        cc.Unmarshal(entry.Data)
+	        cc.Unmarshal(entry.GetData())
 	        s.Node.ApplyConfChange(cc)
 	      }
 	    }
@@ -246,7 +246,7 @@ application to the local state machine (apply). Those will look something like:
 	        process(entry)
 	        if entry.GetType() == raftpb.EntryConfChange {
 	          var cc raftpb.ConfChange
-	          cc.Unmarshal(entry.Data)
+	          cc.Unmarshal(entry.GetData())
 	          s.Node.ApplyConfChange(cc)
 	        }
 	      }

@@ -112,8 +112,8 @@ func TestProgressLeader(t *testing.T) {
 
 	ents := r.raftLog.nextUnstableEnts()
 	require.Len(t, ents, 6)
-	require.Len(t, ents[0].Data, 0)
-	require.Equal(t, "foo", string(ents[5].Data))
+	require.Len(t, ents[0].GetData(), 0)
+	require.Equal(t, "foo", string(ents[5].GetData()))
 
 	r.advanceMessagesAfterAppend()
 
@@ -184,8 +184,8 @@ func TestProgressFlowControl(t *testing.T) {
 
 	require.Len(t, ms[0].Entries, 2)
 
-	require.Empty(t, ms[0].Entries[0].Data)
-	require.Len(t, ms[0].Entries[1].Data, 1000)
+	require.Empty(t, ms[0].Entries[0].GetData())
+	require.Len(t, ms[0].Entries[1].GetData(), 1000)
 
 	ackAndVerify := func(index uint64, expEntries ...int) uint64 {
 		r.Step(pb.Message{From: 2, To: 1, Type: pb.MessageType_MsgAppResp, Index: index})
@@ -602,7 +602,7 @@ func TestLogReplication(t *testing.T) {
 
 			var ents []pb.Entry
 			for _, e := range nextEnts(sm, tt.network.storage[j]) {
-				if e.Data != nil {
+				if e.GetData() != nil {
 					ents = append(ents, e)
 				}
 			}
@@ -613,7 +613,7 @@ func TestLogReplication(t *testing.T) {
 				}
 			}
 			for k, m := range props {
-				assert.Equal(t, m.Entries[0].Data, ents[k].Data, "#%d.%d", i, j)
+				assert.Equal(t, m.Entries[0].GetData(), ents[k].GetData(), "#%d.%d", i, j)
 			}
 		}
 	}
@@ -2998,7 +2998,7 @@ func TestCommitAfterRemoveNode(t *testing.T) {
 	ents := nextEnts(r, s)
 	require.Len(t, ents, 2)
 	require.Equal(t, pb.EntryType_EntryNormal, ents[0].GetType())
-	require.Nil(t, ents[0].Data)
+	require.Nil(t, ents[0].GetData())
 	require.Equal(t, pb.EntryType_EntryConfChange, ents[1].GetType())
 
 	// Apply the config change. This reduces quorum requirements so the
@@ -3007,7 +3007,7 @@ func TestCommitAfterRemoveNode(t *testing.T) {
 	ents = nextEnts(r, s)
 	require.Len(t, ents, 1)
 	require.Equal(t, pb.EntryType_EntryNormal, ents[0].GetType())
-	require.Equal(t, []byte("hello"), ents[0].Data)
+	require.Equal(t, []byte("hello"), ents[0].GetData())
 }
 
 // TestLeaderTransferToUpToDateNode verifies transferring should succeed

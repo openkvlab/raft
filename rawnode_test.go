@@ -241,11 +241,11 @@ func TestRawNodeProposeAndConfChange(t *testing.T) {
 					var cc pb.ConfChangeI
 					if ent.GetType() == pb.EntryType_EntryConfChange {
 						var ccc pb.ConfChange
-						require.NoError(t, ccc.Unmarshal(ent.Data))
+						require.NoError(t, ccc.Unmarshal(ent.GetData()))
 						cc = ccc
 					} else if ent.GetType() == pb.EntryType_EntryConfChangeV2 {
 						var ccc pb.ConfChangeV2
-						require.NoError(t, ccc.Unmarshal(ent.Data))
+						require.NoError(t, ccc.Unmarshal(ent.GetData()))
 						cc = ccc
 					}
 					if cc != nil {
@@ -280,14 +280,14 @@ func TestRawNodeProposeAndConfChange(t *testing.T) {
 			entries, err := s.Entries(lastIndex-1, lastIndex+1, noLimit)
 			require.NoError(t, err)
 			require.Len(t, entries, 2)
-			assert.Equal(t, []byte("somedata"), entries[0].Data)
+			assert.Equal(t, []byte("somedata"), entries[0].GetData())
 
 			typ := pb.EntryType_EntryConfChange
 			if _, ok := tc.cc.AsV1(); !ok {
 				typ = pb.EntryType_EntryConfChangeV2
 			}
 			require.Equal(t, typ, entries[1].GetType())
-			assert.Equal(t, ccdata, entries[1].Data)
+			assert.Equal(t, ccdata, entries[1].GetData())
 
 			require.Equal(t, &tc.exp, cs)
 
@@ -325,7 +325,7 @@ func TestRawNodeProposeAndConfChange(t *testing.T) {
 			require.Len(t, rd.Entries, 1)
 			require.Equal(t, pb.EntryType_EntryConfChangeV2, rd.Entries[0].GetType())
 			var cc pb.ConfChangeV2
-			require.NoError(t, cc.Unmarshal(rd.Entries[0].Data))
+			require.NoError(t, cc.Unmarshal(rd.Entries[0].GetData()))
 			require.Equal(t, pb.ConfChangeV2{Context: context}, cc)
 
 			// Lie and pretend the ConfChange applied. It won't do so because now
@@ -372,7 +372,7 @@ func TestRawNodeJointAutoLeave(t *testing.T) {
 			var cc pb.ConfChangeI
 			if ent.GetType() == pb.EntryType_EntryConfChangeV2 {
 				var ccc pb.ConfChangeV2
-				require.NoError(t, ccc.Unmarshal(ent.Data))
+				require.NoError(t, ccc.Unmarshal(ent.GetData()))
 				cc = &ccc
 			}
 			if cc != nil {
@@ -402,9 +402,9 @@ func TestRawNodeJointAutoLeave(t *testing.T) {
 	entries, err := s.Entries(lastIndex-1, lastIndex+1, noLimit)
 	require.NoError(t, err)
 	require.Len(t, entries, 2)
-	assert.Equal(t, []byte("somedata"), entries[0].Data)
+	assert.Equal(t, []byte("somedata"), entries[0].GetData())
 	require.Equal(t, pb.EntryType_EntryConfChangeV2, entries[1].GetType())
-	assert.Equal(t, ccdata, entries[1].Data)
+	assert.Equal(t, ccdata, entries[1].GetData())
 
 	require.Equal(t, &expCs, cs)
 
@@ -436,7 +436,7 @@ func TestRawNodeJointAutoLeave(t *testing.T) {
 	require.Len(t, rd.Entries, 1)
 	require.Equal(t, pb.EntryType_EntryConfChangeV2, rd.Entries[0].GetType())
 	var cc pb.ConfChangeV2
-	require.NoError(t, cc.Unmarshal(rd.Entries[0].Data))
+	require.NoError(t, cc.Unmarshal(rd.Entries[0].GetData()))
 	require.Equal(t, pb.ConfChangeV2{Context: nil}, cc)
 	// Lie and pretend the ConfChange applied. It won't do so because now
 	// we require the joint quorum and we're only running one node.
@@ -473,7 +473,7 @@ func TestRawNodeProposeAddDuplicateNode(t *testing.T) {
 		for _, entry := range rd.CommittedEntries {
 			if entry.GetType() == pb.EntryType_EntryConfChange {
 				var cc pb.ConfChange
-				cc.Unmarshal(entry.Data)
+				cc.Unmarshal(entry.GetData())
 				rawNode.ApplyConfChange(cc)
 			}
 		}
@@ -501,8 +501,8 @@ func TestRawNodeProposeAddDuplicateNode(t *testing.T) {
 	entries, err := s.Entries(lastIndex-2, lastIndex+1, noLimit)
 	require.NoError(t, err)
 	require.Len(t, entries, 3)
-	assert.Equal(t, ccdata1, entries[0].Data)
-	assert.Equal(t, ccdata2, entries[2].Data)
+	assert.Equal(t, ccdata1, entries[0].GetData())
+	assert.Equal(t, ccdata2, entries[2].GetData())
 }
 
 // TestRawNodeReadIndex ensures that Rawnode.ReadIndex sends the MsgReadIndex message
@@ -549,7 +549,7 @@ func TestRawNodeReadIndex(t *testing.T) {
 	// ensure that MsgReadIndex message is sent to the underlying raft
 	require.Len(t, msgs, 1)
 	assert.Equal(t, pb.MessageType_MsgReadIndex, msgs[0].Type)
-	assert.Equal(t, wrequestCtx, msgs[0].Entries[0].Data)
+	assert.Equal(t, wrequestCtx, msgs[0].Entries[0].GetData())
 }
 
 // TestBlockProposal from node_test.go has no equivalent in rawNode because there is
