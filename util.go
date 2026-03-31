@@ -104,7 +104,7 @@ func DescribeConfState(state *pb.ConfState) string {
 
 func DescribeSnapshot(snap pb.Snapshot) string {
 	m := snap.Metadata
-	return fmt.Sprintf("Index:%d Term:%d ConfState:%s", m.GetIndex(), m.Term, DescribeConfState(m.GetConfState()))
+	return fmt.Sprintf("Index:%d Term:%d ConfState:%s", m.GetIndex(), m.GetTerm(), DescribeConfState(m.GetConfState()))
 }
 
 func DescribeReady(rd Ready, f EntryFormatter) string {
