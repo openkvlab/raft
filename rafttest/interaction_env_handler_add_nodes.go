@@ -29,6 +29,7 @@ import (
 func (env *InteractionEnv) handleAddNodes(t *testing.T, d datadriven.TestData) error {
 	n := firstAsInt(t, d)
 	var snap pb.Snapshot
+	pb.EnsureSnapshotMetadata(&snap.Metadata)
 	cfg := raftConfigStub()
 	for _, arg := range d.CmdArgs[1:] {
 		for i := range arg.Vals {
