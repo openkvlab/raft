@@ -114,10 +114,12 @@ type MemoryStorage struct {
 
 // NewMemoryStorage creates an empty MemoryStorage.
 func NewMemoryStorage() *MemoryStorage {
-	return &MemoryStorage{
+	ms := &MemoryStorage{
 		// When starting from scratch populate the list with a dummy entry at term zero.
 		ents: make([]pb.Entry, 1),
 	}
+	pb.EnsureSnapshotMetadata(&ms.snapshot.Metadata)
+	return ms
 }
 
 // InitialState implements the Storage interface.
