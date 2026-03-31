@@ -87,12 +87,14 @@ func TestFindConflictByTerm(t *testing.T) {
 		{ents: index(10).terms(3, 3, 3, 4, 4, 4), index: 0, term: 0, want: 0}, // ErrCompacted
 	} {
 		t.Run("", func(t *testing.T) {
-		st := NewMemoryStorage()
-		require.NotEmpty(t, tt.ents)
-		st.ApplySnapshot(pb.Snapshot{Metadata: &pb.SnapshotMetadata{
-			Index: new(tt.ents[0].GetIndex()),
-			Term:  new(tt.ents[0].GetTerm()),
-			}})
+			st := NewMemoryStorage()
+			require.NotEmpty(t, tt.ents)
+			st.ApplySnapshot(pb.Snapshot{
+				Metadata: &pb.SnapshotMetadata{
+					Index: new(tt.ents[0].GetIndex()),
+					Term:  new(tt.ents[0].GetTerm()),
+				},
+			})
 			l := newLog(st, raftLogger)
 			l.append(tt.ents[1:]...)
 
@@ -675,10 +677,10 @@ func TestStableToWithSnap(t *testing.T) {
 		{snapi - 1, snapt + 1, index(snapi + 1).terms(snapt), snapi + 1},
 	}
 	for i, tt := range tests {
-	t.Run(fmt.Sprint(i), func(t *testing.T) {
-		s := NewMemoryStorage()
-		require.NoError(t, s.ApplySnapshot(pb.Snapshot{Metadata: &pb.SnapshotMetadata{Index: new(snapi), Term: new(snapt)}}))
-		raftLog := newLog(s, raftLogger)
+		t.Run(fmt.Sprint(i), func(t *testing.T) {
+			s := NewMemoryStorage()
+			require.NoError(t, s.ApplySnapshot(pb.Snapshot{Metadata: &pb.SnapshotMetadata{Index: new(snapi), Term: new(snapt)}}))
+			raftLog := newLog(s, raftLogger)
 			raftLog.append(tt.newEnts...)
 			raftLog.stableTo(entryID{term: tt.stablet, index: tt.stablei})
 			require.Equal(t, tt.wunstable, raftLog.unstable.offset)
