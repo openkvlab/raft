@@ -2245,7 +2245,7 @@ func TestBcastBeat(t *testing.T) {
 	offset := uint64(1000)
 	// make a state machine with log.offset = 1000
 	s := pb.Snapshot{
-		Metadata: pb.SnapshotMetadata{
+		Metadata: &pb.SnapshotMetadata{
 			Index:     new(offset),
 			Term:      new(uint64(1)),
 			ConfState: &pb.ConfState{Voters: []uint64{1, 2, 3}},
@@ -2454,7 +2454,7 @@ func TestRecvMsgUnreachable(t *testing.T) {
 
 func TestRestore(t *testing.T) {
 	s := pb.Snapshot{
-		Metadata: pb.SnapshotMetadata{
+		Metadata: &pb.SnapshotMetadata{
 			Index:     new(uint64(11)), // magic number
 			Term:      new(uint64(11)), // magic number
 			ConfState: &pb.ConfState{Voters: []uint64{1, 2, 3}},
@@ -2465,9 +2465,9 @@ func TestRestore(t *testing.T) {
 	sm := newTestRaft(1, 10, 1, storage)
 	require.True(t, sm.restore(s))
 
-	assert.Equal(t, s.Metadata.GetIndex(), sm.raftLog.lastIndex())
-	assert.Equal(t, s.Metadata.GetTerm(), mustTerm(sm.raftLog.term(s.Metadata.GetIndex())))
-	assert.Equal(t, s.Metadata.ConfState.Voters, sm.trk.VoterNodes())
+	assert.Equal(t, s.GetMetadata().GetIndex(), sm.raftLog.lastIndex())
+	assert.Equal(t, s.GetMetadata().GetTerm(), mustTerm(sm.raftLog.term(s.GetMetadata().GetIndex())))
+	assert.Equal(t, s.GetMetadata().ConfState.Voters, sm.trk.VoterNodes())
 
 	require.False(t, sm.restore(s))
 	for i := 0; i < sm.randomizedElectionTimeout; i++ {
@@ -2479,7 +2479,7 @@ func TestRestore(t *testing.T) {
 // TestRestoreWithLearner restores a snapshot which contains learners.
 func TestRestoreWithLearner(t *testing.T) {
 	s := pb.Snapshot{
-		Metadata: pb.SnapshotMetadata{
+		Metadata: &pb.SnapshotMetadata{
 			Index:     new(uint64(11)), // magic number
 			Term:      new(uint64(11)), // magic number
 			ConfState: &pb.ConfState{Voters: []uint64{1, 2}, Learners: []uint64{3}},
@@ -2490,19 +2490,19 @@ func TestRestoreWithLearner(t *testing.T) {
 	sm := newTestLearnerRaft(3, 8, 2, storage)
 	assert.True(t, sm.restore(s))
 
-	assert.Equal(t, s.Metadata.GetIndex(), sm.raftLog.lastIndex())
-	assert.Equal(t, s.Metadata.GetTerm(), mustTerm(sm.raftLog.term(s.Metadata.GetIndex())))
+	assert.Equal(t, s.GetMetadata().GetIndex(), sm.raftLog.lastIndex())
+	assert.Equal(t, s.GetMetadata().GetTerm(), mustTerm(sm.raftLog.term(s.GetMetadata().GetIndex())))
 
 	sg := sm.trk.VoterNodes()
-	assert.Len(t, sg, len(s.Metadata.ConfState.Voters))
+	assert.Len(t, sg, len(s.GetMetadata().ConfState.Voters))
 
 	lns := sm.trk.LearnerNodes()
-	assert.Len(t, lns, len(s.Metadata.ConfState.Learners))
+	assert.Len(t, lns, len(s.GetMetadata().ConfState.Learners))
 
-	for _, n := range s.Metadata.ConfState.Voters {
+	for _, n := range s.GetMetadata().ConfState.Voters {
 		assert.False(t, sm.trk.Progress[n].IsLearner)
 	}
-	for _, n := range s.Metadata.ConfState.Learners {
+	for _, n := range s.GetMetadata().ConfState.Learners {
 		assert.True(t, sm.trk.Progress[n].IsLearner)
 	}
 
@@ -2512,7 +2512,7 @@ func TestRestoreWithLearner(t *testing.T) {
 // TestRestoreWithVotersOutgoing tests if outgoing voter can receive and apply snapshot correctly.
 func TestRestoreWithVotersOutgoing(t *testing.T) {
 	s := pb.Snapshot{
-		Metadata: pb.SnapshotMetadata{
+		Metadata: &pb.SnapshotMetadata{
 			Index:     new(uint64(11)), // magic number
 			Term:      new(uint64(11)), // magic number
 			ConfState: &pb.ConfState{Voters: []uint64{2, 3, 4}, VotersOutgoing: []uint64{1, 2, 3}},
@@ -2523,8 +2523,8 @@ func TestRestoreWithVotersOutgoing(t *testing.T) {
 	sm := newTestRaft(1, 10, 1, storage)
 	require.True(t, sm.restore(s))
 
-	assert.Equal(t, s.Metadata.GetIndex(), sm.raftLog.lastIndex())
-	assert.Equal(t, mustTerm(sm.raftLog.term(s.Metadata.GetIndex())), s.Metadata.GetTerm())
+	assert.Equal(t, s.GetMetadata().GetIndex(), sm.raftLog.lastIndex())
+	assert.Equal(t, mustTerm(sm.raftLog.term(s.GetMetadata().GetIndex())), s.GetMetadata().GetTerm())
 
 	sg := sm.trk.VoterNodes()
 	assert.Equal(t, []uint64{1, 2, 3, 4}, sg)
@@ -2548,7 +2548,7 @@ func TestRestoreWithVotersOutgoing(t *testing.T) {
 // permanently cut off from the Raft log.
 func TestRestoreVoterToLearner(t *testing.T) {
 	s := pb.Snapshot{
-		Metadata: pb.SnapshotMetadata{
+		Metadata: &pb.SnapshotMetadata{
 			Index:     new(uint64(11)), // magic number
 			Term:      new(uint64(11)), // magic number
 			ConfState: &pb.ConfState{Voters: []uint64{1, 2}, Learners: []uint64{3}},
@@ -2566,7 +2566,7 @@ func TestRestoreVoterToLearner(t *testing.T) {
 // restoring snapshot.
 func TestRestoreLearnerPromotion(t *testing.T) {
 	s := pb.Snapshot{
-		Metadata: pb.SnapshotMetadata{
+		Metadata: &pb.SnapshotMetadata{
 			Index:     new(uint64(11)), // magic number
 			Term:      new(uint64(11)), // magic number
 			ConfState: &pb.ConfState{Voters: []uint64{1, 2, 3}},
@@ -2585,7 +2585,7 @@ func TestRestoreLearnerPromotion(t *testing.T) {
 func TestLearnerReceiveSnapshot(t *testing.T) {
 	// restore the state machine from a snapshot so it has a compacted log and a snapshot
 	s := pb.Snapshot{
-		Metadata: pb.SnapshotMetadata{
+		Metadata: &pb.SnapshotMetadata{
 			Index:     new(uint64(11)), // magic number
 			Term:      new(uint64(11)), // magic number
 			ConfState: &pb.ConfState{Voters: []uint64{1}, Learners: []uint64{2}},
@@ -2622,7 +2622,7 @@ func TestRestoreIgnoreSnapshot(t *testing.T) {
 	sm.raftLog.commitTo(commit)
 
 	s := pb.Snapshot{
-		Metadata: pb.SnapshotMetadata{
+		Metadata: &pb.SnapshotMetadata{
 			Index:     new(commit),
 			Term:      new(uint64(1)),
 			ConfState: &pb.ConfState{Voters: []uint64{1, 2}},
@@ -2642,7 +2642,7 @@ func TestRestoreIgnoreSnapshot(t *testing.T) {
 func TestProvideSnap(t *testing.T) {
 	// restore the state machine from a snapshot so it has a compacted log and a snapshot
 	s := pb.Snapshot{
-		Metadata: pb.SnapshotMetadata{
+		Metadata: &pb.SnapshotMetadata{
 			Index:     new(uint64(11)), // magic number
 			Term:      new(uint64(11)), // magic number
 			ConfState: &pb.ConfState{Voters: []uint64{1, 2}},
@@ -2668,7 +2668,7 @@ func TestProvideSnap(t *testing.T) {
 func TestIgnoreProvidingSnap(t *testing.T) {
 	// restore the state machine from a snapshot so it has a compacted log and a snapshot
 	s := pb.Snapshot{
-		Metadata: pb.SnapshotMetadata{
+		Metadata: &pb.SnapshotMetadata{
 			Index:     new(uint64(11)), // magic number
 			Term:      new(uint64(11)), // magic number
 			ConfState: &pb.ConfState{Voters: []uint64{1, 2}},
@@ -2694,7 +2694,7 @@ func TestIgnoreProvidingSnap(t *testing.T) {
 
 func TestRestoreFromSnapMsg(t *testing.T) {
 	s := &pb.Snapshot{
-		Metadata: pb.SnapshotMetadata{
+		Metadata: &pb.SnapshotMetadata{
 			Index:     new(uint64(11)), // magic number
 			Term:      new(uint64(11)), // magic number
 			ConfState: &pb.ConfState{Voters: []uint64{1, 2}},

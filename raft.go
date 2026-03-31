@@ -681,7 +681,7 @@ func (r *raft) maybeSendSnapshot(to uint64, pr *tracker.Progress) bool {
 	if IsEmptySnap(snapshot) {
 		panic("need non-empty snapshot")
 	}
-	sindex, sterm := snapshot.Metadata.GetIndex(), snapshot.Metadata.GetTerm()
+	sindex, sterm := snapshot.GetMetadata().GetIndex(), snapshot.GetMetadata().GetTerm()
 	r.logger.Debugf("%x [firstindex: %d, commit: %d] sent snapshot[index: %d, term: %d] to %x [%s]",
 		r.id, r.raftLog.firstIndex(), r.raftLog.committed, sindex, sterm, to, pr)
 	pr.BecomeSnapshot(sindex)
@@ -765,7 +765,7 @@ func (r *raft) appliedTo(index uint64, size entryEncodingSize) {
 }
 
 func (r *raft) appliedSnap(snap *pb.Snapshot) {
-	index := snap.Metadata.GetIndex()
+	index := snap.GetMetadata().GetIndex()
 	r.raftLog.stableSnapTo(index)
 	r.appliedTo(index, 0 /* size */)
 }
@@ -1834,7 +1834,7 @@ func (r *raft) handleSnapshot(m pb.Message) {
 	if m.Snapshot != nil {
 		s = *m.Snapshot
 	}
-	sindex, sterm := s.Metadata.GetIndex(), s.Metadata.GetTerm()
+	sindex, sterm := s.GetMetadata().GetIndex(), s.GetMetadata().GetTerm()
 	if r.restore(s) {
 		r.logger.Infof("%x [commit: %d] restored snapshot [index: %d, term: %d]",
 			r.id, r.raftLog.committed, sindex, sterm)
@@ -1850,7 +1850,7 @@ func (r *raft) handleSnapshot(m pb.Message) {
 // configuration of state machine. If this method returns false, the snapshot was
 // ignored, either because it was obsolete or because of an error.
 func (r *raft) restore(s pb.Snapshot) bool {
-	if s.Metadata.GetIndex() <= r.raftLog.committed {
+	if s.GetMetadata().GetIndex() <= r.raftLog.committed {
 		return false
 	}
 	if r.state != StateFollower {
@@ -1870,7 +1870,7 @@ func (r *raft) restore(s pb.Snapshot) bool {
 	// config. This shouldn't ever happen (at the time of writing) but lots of
 	// code here and there assumes that r.id is in the progress tracker.
 	found := false
-	cs := s.Metadata.GetConfState()
+	cs := s.GetMetadata().GetConfState()
 
 	for _, set := range [][]uint64{
 		cs.Voters,
@@ -1899,13 +1899,13 @@ func (r *raft) restore(s pb.Snapshot) bool {
 
 	// Now go ahead and actually restore.
 
-	id := entryID{term: s.Metadata.GetTerm(), index: s.Metadata.GetIndex()}
+	id := entryID{term: s.GetMetadata().GetTerm(), index: s.GetMetadata().GetIndex()}
 	if r.raftLog.matchTerm(id) {
 		// TODO(pav-kv): can print %+v of the id, but it will change the format.
 		last := r.raftLog.lastEntryID()
 		r.logger.Infof("%x [commit: %d, lastindex: %d, lastterm: %d] fast-forwarded commit to snapshot [index: %d, term: %d]",
 			r.id, r.raftLog.committed, last.index, last.term, id.index, id.term)
-		r.raftLog.commitTo(s.Metadata.GetIndex())
+		r.raftLog.commitTo(s.GetMetadata().GetIndex())
 		return false
 	}
 

@@ -29,7 +29,7 @@ import (
 func (env *InteractionEnv) handleAddNodes(t *testing.T, d datadriven.TestData) error {
 	n := firstAsInt(t, d)
 	var snap pb.Snapshot
-	pb.EnsureSnapshotMetadata(&snap.Metadata)
+	pb.EnsureSnapshot(&snap)
 	cfg := raftConfigStub()
 	for _, arg := range d.CmdArgs[1:] {
 		for i := range arg.Vals {
@@ -48,7 +48,7 @@ func (env *InteractionEnv) handleAddNodes(t *testing.T, d datadriven.TestData) e
 				var idx uint64
 				arg.Scan(t, i, &idx)
 				snap.Metadata.Index = new(idx)
-				cfg.Applied = snap.Metadata.GetIndex()
+				cfg.Applied = snap.GetMetadata().GetIndex()
 			case "content":
 				arg.Scan(t, i, &snap.Data)
 			case "async-storage-writes":
@@ -96,7 +96,7 @@ var _ raft.Storage = snapOverrideStorage{}
 // empty), and using the cfg as template. They will be assigned consecutive IDs.
 func (env *InteractionEnv) AddNodes(n int, cfg raft.Config, snap pb.Snapshot) error {
 	emptySnapshot := pb.Snapshot{}
-	pb.EnsureSnapshotMetadata(&emptySnapshot.Metadata)
+	pb.EnsureSnapshot(&emptySnapshot)
 	bootstrap := !reflect.DeepEqual(snap, emptySnapshot)
 	for i := 0; i < n; i++ {
 		id := uint64(1 + len(env.Nodes))
@@ -116,7 +116,7 @@ func (env *InteractionEnv) AddNodes(n int, cfg raft.Config, snap pb.Snapshot) er
 		if bootstrap {
 			// NB: we could make this work with 1, but MemoryStorage just
 			// doesn't play well with that and it's not a loss of generality.
-			if snap.Metadata.GetIndex() <= 1 {
+			if snap.GetMetadata().GetIndex() <= 1 {
 				return errors.New("index must be specified as > 1 due to bootstrap")
 			}
 			snap.Metadata.Term = new(uint64(1))
@@ -130,7 +130,7 @@ func (env *InteractionEnv) AddNodes(n int, cfg raft.Config, snap pb.Snapshot) er
 			// At the time of writing and for *MemoryStorage, applying a
 			// snapshot also truncates appropriately, but this would change with
 			// other storage engines potentially.
-			if exp := snap.Metadata.GetIndex() + 1; fi != exp {
+			if exp := snap.GetMetadata().GetIndex() + 1; fi != exp {
 				return fmt.Errorf("failed to establish first index %d; got %d", exp, fi)
 			}
 		}
