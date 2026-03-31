@@ -23,3 +23,14 @@ func EnsureSnapshotMetadata(m *SnapshotMetadata) *SnapshotMetadata {
 	}
 	return m
 }
+
+// EnsureSnapshot ensures that s and all of its pointer fields are non-nil.
+// If s is nil, a new Snapshot is allocated. Any nil pointer field is set to
+// point to its zero value. Returns the resulting s.
+func EnsureSnapshot(s *Snapshot) *Snapshot {
+	if s == nil {
+		s = new(Snapshot)
+	}
+	s.Metadata = EnsureSnapshotMetadata(s.Metadata)
+	return s
+}
