@@ -91,7 +91,7 @@ func TestFindConflictByTerm(t *testing.T) {
 			require.NotEmpty(t, tt.ents)
 			st.ApplySnapshot(pb.Snapshot{Metadata: pb.SnapshotMetadata{
 				Index: new(tt.ents[0].GetIndex()),
-				Term: new(tt.ents[0].GetTerm()),
+				Term:  new(tt.ents[0].GetTerm()),
 			}})
 			l := newLog(st, raftLogger)
 			l.append(tt.ents[1:]...)
