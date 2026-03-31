@@ -24,7 +24,7 @@ message SnapshotMetadata {
 
 message Snapshot {
 	optional bytes            data     = 1;
-	optional SnapshotMetadata metadata = 2 [(gogoproto.nullable) = false];
+	optional SnapshotMetadata metadata = 2;
 }
 
 // For description of different message types, see:
