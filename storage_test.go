@@ -158,8 +158,8 @@ func TestStorageCreateSnapshot(t *testing.T) {
 		werr  error
 		wsnap pb.Snapshot
 	}{
-		{4, nil, pb.Snapshot{Data: data, Metadata: pb.SnapshotMetadata{Index: new(uint64(4)), Term: new(uint64(4)), ConfState: cs}}},
-		{5, nil, pb.Snapshot{Data: data, Metadata: pb.SnapshotMetadata{Index: new(uint64(5)), Term: new(uint64(5)), ConfState: cs}}},
+		{4, nil, pb.Snapshot{Data: data, Metadata: &pb.SnapshotMetadata{Index: new(uint64(4)), Term: new(uint64(4)), ConfState: cs}}},
+		{5, nil, pb.Snapshot{Data: data, Metadata: &pb.SnapshotMetadata{Index: new(uint64(5)), Term: new(uint64(5)), ConfState: cs}}},
 	}
 
 	for _, tt := range tests {
@@ -241,22 +241,22 @@ func TestStorageApplySnapshot(t *testing.T) {
 		{
 			name: "normal case",
 			snapshots: []pb.Snapshot{
-				{Data: data, Metadata: pb.SnapshotMetadata{Index: new(uint64(4)), Term: new(uint64(4)), ConfState: cs}},
+				{Data: data, Metadata: &pb.SnapshotMetadata{Index: new(uint64(4)), Term: new(uint64(4)), ConfState: cs}},
 			},
 			expectedError: nil,
 		},
 		{
 			name: "snapshot out of date",
 			snapshots: []pb.Snapshot{
-				{Data: data, Metadata: pb.SnapshotMetadata{Index: new(uint64(4)), Term: new(uint64(4)), ConfState: cs}},
-				{Data: data, Metadata: pb.SnapshotMetadata{Index: new(uint64(3)), Term: new(uint64(3)), ConfState: cs}},
+				{Data: data, Metadata: &pb.SnapshotMetadata{Index: new(uint64(4)), Term: new(uint64(4)), ConfState: cs}},
+				{Data: data, Metadata: &pb.SnapshotMetadata{Index: new(uint64(3)), Term: new(uint64(3)), ConfState: cs}},
 			},
 			expectedError: ErrSnapOutOfDate,
 		},
 		{
 			name: "bootstrap with confState",
 			snapshots: []pb.Snapshot{
-				{Data: data, Metadata: pb.SnapshotMetadata{ConfState: cs}},
+				{Data: data, Metadata: &pb.SnapshotMetadata{ConfState: cs}},
 			},
 			expectedError: nil,
 		},

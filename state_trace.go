@@ -142,7 +142,7 @@ func makeTracingMessage(m *raftpb.Message) *TracingMessage {
 	if m.Type == raftpb.MessageType_MsgSnap {
 		index = 0
 		logTerm = 0
-		entries = int(m.Snapshot.Metadata.GetIndex())
+		entries = int(m.Snapshot.GetMetadata().GetIndex())
 	}
 	return &TracingMessage{
 		Type:        m.Type.String(),

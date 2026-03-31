@@ -81,7 +81,7 @@ func TestRawNodeStep(t *testing.T) {
 			s := NewMemoryStorage()
 			s.SetHardState(pb.HardState{Term: 1, Commit: 1})
 			s.Append([]pb.Entry{{Term: new(uint64(1)), Index: new(uint64(1))}})
-			require.NoError(t, s.ApplySnapshot(pb.Snapshot{Metadata: pb.SnapshotMetadata{
+			require.NoError(t, s.ApplySnapshot(pb.Snapshot{Metadata: &pb.SnapshotMetadata{
 				ConfState: &pb.ConfState{
 					Voters: []uint64{1},
 				},
@@ -616,7 +616,7 @@ func TestRawNodeStart(t *testing.T) {
 		require.True(t, IsEmptyHardState(hs))
 		require.Empty(t, ics.Voters)
 
-		meta := pb.SnapshotMetadata{
+		meta := &pb.SnapshotMetadata{
 			Index:     new(uint64(1)),
 			Term:      new(uint64(0)),
 			ConfState: &cs,
@@ -682,7 +682,7 @@ func TestRawNodeRestart(t *testing.T) {
 
 func TestRawNodeRestartFromSnapshot(t *testing.T) {
 	snap := pb.Snapshot{
-		Metadata: pb.SnapshotMetadata{
+		Metadata: &pb.SnapshotMetadata{
 			ConfState: &pb.ConfState{Voters: []uint64{1, 2}},
 			Index:     new(uint64(2)),
 			Term:      new(uint64(1)),
