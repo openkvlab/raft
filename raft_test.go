@@ -1025,7 +1025,7 @@ func TestCommit(t *testing.T) {
 	for i, tt := range tests {
 		storage := newTestMemoryStorage(withPeers(1))
 		storage.Append(tt.logs)
-		storage.hardState = pb.HardState{Term: tt.smTerm}
+		storage.hardState = pb.HardState{Term: new(uint64(tt.smTerm))}
 
 		sm := newTestRaft(1, 10, 2, storage)
 		for j := 0; j < len(tt.matches); j++ {
@@ -2057,7 +2057,7 @@ func TestReadOnlyForNewLeader(t *testing.T) {
 	for _, c := range nodeConfigs {
 		storage := newTestMemoryStorage(withPeers(1, 2, 3))
 		require.NoError(t, storage.Append(index(1).terms(1, 1)))
-		storage.SetHardState(pb.HardState{Term: 1, Commit: c.committed})
+		storage.SetHardState(pb.HardState{Term: new(uint64(1)), Commit: new(uint64(c.committed))})
 		if c.compactIndex != 0 {
 			storage.Compact(c.compactIndex)
 		}
@@ -3857,8 +3857,8 @@ func TestFastLogRejection(t *testing.T) {
 			s1.Append(test.leaderLog)
 			last := test.leaderLog[len(test.leaderLog)-1]
 			s1.SetHardState(pb.HardState{
-				Term:   last.GetTerm() - 1,
-				Commit: last.GetIndex(),
+				Term:   new(uint64(last.GetTerm() - 1)),
+				Commit: new(uint64(last.GetIndex())),
 			})
 			n1 := newTestRaft(1, 10, 1, s1)
 			n1.becomeCandidate() // bumps Term to last.Term
@@ -3868,9 +3868,9 @@ func TestFastLogRejection(t *testing.T) {
 			s2.snapshot.Metadata.ConfState = &pb.ConfState{Voters: []uint64{1, 2, 3}}
 			s2.Append(test.followerLog)
 			s2.SetHardState(pb.HardState{
-				Term:   last.GetTerm(),
-				Vote:   1,
-				Commit: 0,
+				Term:   new(uint64(last.GetTerm())),
+				Vote:   new(uint64(1)),
+				Commit: new(uint64(0)),
 			})
 			n2 := newTestRaft(2, 10, 1, s2)
 			if test.followerCompact != 0 {
@@ -3925,7 +3925,7 @@ func entsWithConfig(configFunc func(*Config), terms ...uint64) *raft {
 // the given term but has not received any logs).
 func votedWithConfig(configFunc func(*Config), vote, term uint64) *raft {
 	storage := NewMemoryStorage()
-	storage.SetHardState(pb.HardState{Vote: vote, Term: term})
+	storage.SetHardState(pb.HardState{Vote: new(uint64(vote)), Term: new(uint64(term))})
 	cfg := newTestConfig(1, 5, 1, storage)
 	if configFunc != nil {
 		configFunc(cfg)

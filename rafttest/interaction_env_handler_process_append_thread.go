@@ -58,9 +58,9 @@ func (env *InteractionEnv) ProcessAppendThread(idx int) error {
 	env.Output.WriteString("Processing:\n")
 	env.Output.WriteString(raft.DescribeMessage(m, defaultEntryFormatter) + "\n")
 	st := raftpb.HardState{
-		Term:   m.GetTerm(),
-		Vote:   m.GetVote(),
-		Commit: m.GetCommit(),
+		Term:   new(uint64(m.GetTerm())),
+		Vote:   new(uint64(m.GetVote())),
+		Commit: new(uint64(m.GetCommit())),
 	}
 	var snap raftpb.Snapshot
 	if m.GetSnapshot() != nil {

@@ -504,9 +504,9 @@ func (r *raft) softState() SoftState { return SoftState{Lead: r.lead, RaftState:
 
 func (r *raft) hardState() pb.HardState {
 	return pb.HardState{
-		Term:   r.Term,
-		Vote:   r.Vote,
-		Commit: r.raftLog.committed,
+		Term:   new(uint64(r.Term)),
+		Vote:   new(uint64(r.Vote)),
+		Commit: new(uint64(r.raftLog.committed)),
 	}
 }
 
