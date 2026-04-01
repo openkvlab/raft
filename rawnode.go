@@ -237,9 +237,9 @@ func newStorageAppendMsg(r *raft, rd Ready) pb.Message {
 		// If the Ready does not include a HardState update, make sure to not
 		// assign a value to any of the fields so that a HardState reconstructed
 		// from them will be empty (return true from raft.IsEmptyHardState).
-		m.Term = new(rd.Term)
-		m.Vote = new(rd.Vote)
-		m.Commit = new(rd.Commit)
+		m.Term = new(uint64(rd.GetTerm()))
+		m.Vote = new(uint64(rd.GetVote()))
+		m.Commit = new(uint64(rd.GetCommit()))
 	}
 	if !IsEmptySnap(rd.Snapshot) {
 		snap := rd.Snapshot
