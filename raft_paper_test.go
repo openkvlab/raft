@@ -230,7 +230,7 @@ func TestFollowerVote(t *testing.T) {
 	}
 	for i, tt := range tests {
 		r := newTestRaft(1, 10, 1, newTestMemoryStorage(withPeers(1, 2, 3)))
-		r.loadState(pb.HardState{Term: new(uint64(1)), Vote: new(uint64(tt.vote))})
+		r.loadState(pb.HardState{Term: new(uint64(1)), Vote: new(tt.vote)})
 
 		r.Step(pb.Message{From: new(tt.nvote), To: new(uint64(1)), Term: new(uint64(1)), Type: new(pb.MessageType_MsgVote)})
 
@@ -651,11 +651,11 @@ func TestLeaderSyncFollowerLog(t *testing.T) {
 		leadStorage := newTestMemoryStorage(withPeers(1, 2, 3))
 		leadStorage.Append(ents)
 		lead := newTestRaft(1, 10, 1, leadStorage)
-		lead.loadState(pb.HardState{Commit: new(uint64(lead.raftLog.lastIndex())), Term: new(uint64(term))})
+		lead.loadState(pb.HardState{Commit: new(lead.raftLog.lastIndex()), Term: new(term)})
 		followerStorage := newTestMemoryStorage(withPeers(1, 2, 3))
 		followerStorage.Append(tt)
 		follower := newTestRaft(2, 10, 1, followerStorage)
-		follower.loadState(pb.HardState{Term: new(uint64(term - 1))})
+		follower.loadState(pb.HardState{Term: new(term - 1)})
 		// It is necessary to have a three-node cluster.
 		// The second may have more up-to-date log than the first one, so the
 		// first node needs the vote from the third node to become the leader.
