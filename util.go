@@ -98,7 +98,7 @@ func DescribeConfState(state *pb.ConfState) string {
 	}
 	return fmt.Sprintf(
 		"Voters:%v VotersOutgoing:%v Learners:%v LearnersNext:%v AutoLeave:%v",
-		state.Voters, state.VotersOutgoing, state.Learners, state.LearnersNext, state.AutoLeave,
+		state.Voters, state.VotersOutgoing, state.Learners, state.LearnersNext, state.GetAutoLeave(),
 	)
 }
 
