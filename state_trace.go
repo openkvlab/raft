@@ -155,7 +155,7 @@ func makeTracingMessage(m *raftpb.Message) *TracingMessage {
 		Commit:      m.GetCommit(),
 		Vote:        strconv.FormatUint(m.GetVote(), 10),
 		Reject:      m.GetReject(),
-		RejectHint:  m.GetReject()Hint,
+		RejectHint:  m.GetRejectHint(),
 	}
 }
 

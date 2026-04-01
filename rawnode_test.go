@@ -376,8 +376,8 @@ func TestRawNodeJointAutoLeave(t *testing.T) {
 				cc = &ccc
 			}
 			if cc != nil {
-			// Force it step down.
-			rawNode.Step(pb.Message{Type: new(pb.MessageType_MsgHeartbeatResp), From: new(uint64(1)), Term: new(uint64(rawNode.raft.Term + 1))})
+				// Force it step down.
+				rawNode.Step(pb.Message{Type: new(pb.MessageType_MsgHeartbeatResp), From: new(uint64(1)), Term: new(rawNode.raft.Term + 1)})
 				cs = rawNode.ApplyConfChange(cc)
 			}
 		}
@@ -801,15 +801,15 @@ func TestRawNodeCommitPaginationAfterRestart(t *testing.T) {
 		require.False(t, highestApplied != 0 && highestApplied+1 != next,
 			"attempting to apply index %d after index %d, leaving a gap", next, highestApplied)
 
-	highestApplied = rd.CommittedEntries[n-1].GetIndex()
-	rawNode.Advance(rd)
-	rawNode.Step(pb.Message{
-		Type:   new(pb.MessageType_MsgHeartbeat),
-		To:     new(uint64(1)),
-		From:   new(uint64(2)), // illegal, but we get away with it
-		Term:   new(uint64(1)),
-		Commit: new(uint64(11)),
-	})
+		highestApplied = rd.CommittedEntries[n-1].GetIndex()
+		rawNode.Advance(rd)
+		rawNode.Step(pb.Message{
+			Type:   new(pb.MessageType_MsgHeartbeat),
+			To:     new(uint64(1)),
+			From:   new(uint64(2)), // illegal, but we get away with it
+			Term:   new(uint64(1)),
+			Commit: new(uint64(11)),
+		})
 	}
 }
 

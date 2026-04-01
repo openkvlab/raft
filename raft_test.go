@@ -188,7 +188,7 @@ func TestProgressFlowControl(t *testing.T) {
 	require.Len(t, ms[0].GetEntries()[1].GetData(), 1000)
 
 	ackAndVerify := func(index uint64, expEntries ...int) uint64 {
-		r.Step(pb.Message{From: new(uint64(2)), To: new(uint64(1)), Type: new(pb.MessageType_MsgAppResp), Index: new(uint64(index))})
+		r.Step(pb.Message{From: new(uint64(2)), To: new(uint64(1)), Type: new(pb.MessageType_MsgAppResp), Index: new(index)})
 		ms := r.readMessages()
 		require.Equal(t, len(expEntries), len(ms))
 
@@ -1112,10 +1112,10 @@ func TestHandleMsgApp(t *testing.T) {
 		{pb.Message{Type: new(pb.MessageType_MsgApp), Term: new(uint64(2)), LogTerm: new(uint64(1)), Index: new(uint64(1)), Commit: new(uint64(4)), Entries: []*pb.Entry{{Index: new(uint64(2)), Term: new(uint64(2))}}}, 2, 2, false},
 
 		// Ensure 3
-		{pb.Message{Type: new(pb.MessageType_MsgApp), Term: new(uint64(1)), LogTerm: new(uint64(1)), Index: new(uint64(1)), Commit: new(uint64(3))}, 2, 1, false},                                                                     // match entry 1, commit up to last new entry 1
+		{pb.Message{Type: new(pb.MessageType_MsgApp), Term: new(uint64(1)), LogTerm: new(uint64(1)), Index: new(uint64(1)), Commit: new(uint64(3))}, 2, 1, false},                                                                      // match entry 1, commit up to last new entry 1
 		{pb.Message{Type: new(pb.MessageType_MsgApp), Term: new(uint64(1)), LogTerm: new(uint64(1)), Index: new(uint64(1)), Commit: new(uint64(3)), Entries: []*pb.Entry{{Index: new(uint64(2)), Term: new(uint64(2))}}}, 2, 2, false}, // match entry 1, commit up to last new entry 2
-		{pb.Message{Type: new(pb.MessageType_MsgApp), Term: new(uint64(2)), LogTerm: new(uint64(2)), Index: new(uint64(2)), Commit: new(uint64(3))}, 2, 2, false},                                                                     // match entry 2, commit up to last new entry 2
-		{pb.Message{Type: new(pb.MessageType_MsgApp), Term: new(uint64(2)), LogTerm: new(uint64(2)), Index: new(uint64(2)), Commit: new(uint64(4))}, 2, 2, false},                                                                     // commit up to log.last()
+		{pb.Message{Type: new(pb.MessageType_MsgApp), Term: new(uint64(2)), LogTerm: new(uint64(2)), Index: new(uint64(2)), Commit: new(uint64(3))}, 2, 2, false},                                                                      // match entry 2, commit up to last new entry 2
+		{pb.Message{Type: new(pb.MessageType_MsgApp), Term: new(uint64(2)), LogTerm: new(uint64(2)), Index: new(uint64(2)), Commit: new(uint64(4))}, 2, 2, false},                                                                      // commit up to log.last()
 	}
 
 	for i, tt := range tests {
@@ -2214,14 +2214,14 @@ func TestLeaderAppResp(t *testing.T) {
 			sm.becomeLeader()
 			sm.readMessages()
 			require.NoError(t, sm.Step(
-		pb.Message{
-			From:       new(uint64(2)),
-			Type:       new(pb.MessageType_MsgAppResp),
-			Index:      new(tt.index),
-			Term:       new(sm.Term),
-			Reject:     new(tt.reject),
-			RejectHint: new(tt.index),
-		},
+				pb.Message{
+					From:       new(uint64(2)),
+					Type:       new(pb.MessageType_MsgAppResp),
+					Index:      new(tt.index),
+					Term:       new(sm.Term),
+					Reject:     new(tt.reject),
+					RejectHint: new(tt.index),
+				},
 			))
 
 			p := sm.trk.Progress[2]

@@ -45,7 +45,7 @@ func TestSendingSnapshotSetPendingSnapshot(t *testing.T) {
 	// node 2 needs a snapshot
 	sm.trk.Progress[2].Next = sm.raftLog.firstIndex()
 
-	sm.Step(pb.Message{From: new(uint64(2)), To: new(uint64(1)), Type: new(pb.MessageType_MsgAppResp), Index: new(uint64(sm.trk.Progress[2].Next - 1)), Reject: new(true)})
+	sm.Step(pb.Message{From: new(uint64(2)), To: new(uint64(1)), Type: new(pb.MessageType_MsgAppResp), Index: new(sm.trk.Progress[2].Next - 1), Reject: new(true)})
 	require.Equal(t, uint64(11), sm.trk.Progress[2].PendingSnapshot)
 }
 

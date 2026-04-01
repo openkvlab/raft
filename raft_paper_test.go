@@ -203,9 +203,9 @@ func TestLeaderElectionInOneRoundRPC(t *testing.T) {
 
 		r.Step(pb.Message{From: new(uint64(1)), To: new(uint64(1)), Type: new(pb.MessageType_MsgHup)})
 		r.advanceMessagesAfterAppend()
-	for id, vote := range tt.votes {
-		r.Step(pb.Message{From: new(uint64(id)), To: new(uint64(1)), Term: new(uint64(r.Term)), Type: new(pb.MessageType_MsgVoteResp), Reject: new(!vote)})
-	}
+		for id, vote := range tt.votes {
+			r.Step(pb.Message{From: new(id), To: new(uint64(1)), Term: new(r.Term), Type: new(pb.MessageType_MsgVoteResp), Reject: new(!vote)})
+		}
 
 		assert.Equal(t, tt.state, r.state, "#%d", i)
 		assert.Equal(t, uint64(1), r.Term, "#%d", i)
@@ -232,12 +232,12 @@ func TestFollowerVote(t *testing.T) {
 		r := newTestRaft(1, 10, 1, newTestMemoryStorage(withPeers(1, 2, 3)))
 		r.loadState(pb.HardState{Term: 1, Vote: tt.vote})
 
-		r.Step(pb.Message{From: new(uint64(tt.nvote)), To: new(uint64(1)), Term: new(uint64(1)), Type: new(pb.MessageType_MsgVote)})
+		r.Step(pb.Message{From: new(tt.nvote), To: new(uint64(1)), Term: new(uint64(1)), Type: new(pb.MessageType_MsgVote)})
 
-	expected := pb.Message{From: new(uint64(1)), To: new(uint64(tt.nvote)), Term: new(uint64(1)), Type: new(pb.MessageType_MsgVoteResp)}
-	if tt.wreject {
-		expected.Reject = new(true)
-	}
+		expected := pb.Message{From: new(uint64(1)), To: new(tt.nvote), Term: new(uint64(1)), Type: new(pb.MessageType_MsgVoteResp)}
+		if tt.wreject {
+			expected.Reject = new(true)
+		}
 		assert.Equal(t, []pb.Message{expected}, r.msgsAfterAppend, "#%d", i)
 	}
 }
@@ -380,8 +380,8 @@ func TestLeaderStartReplication(t *testing.T) {
 	sort.Sort(messageSlice(msgs))
 	wents := []pb.Entry{{Index: new(li + 1), Term: new(uint64(1)), Data: []byte("some data")}}
 	assert.Equal(t, []pb.Message{
-		{From: new(uint64(1)), To: new(uint64(2)), Term: new(uint64(1)), Type: new(pb.MessageType_MsgApp), Index: new(uint64(li)), LogTerm: new(uint64(1)), Entries: pb.EntrySliceToPointers(wents), Commit: new(uint64(li))},
-		{From: new(uint64(1)), To: new(uint64(3)), Term: new(uint64(1)), Type: new(pb.MessageType_MsgApp), Index: new(uint64(li)), LogTerm: new(uint64(1)), Entries: pb.EntrySliceToPointers(wents), Commit: new(uint64(li))},
+		{From: new(uint64(1)), To: new(uint64(2)), Term: new(uint64(1)), Type: new(pb.MessageType_MsgApp), Index: new(li), LogTerm: new(uint64(1)), Entries: pb.EntrySliceToPointers(wents), Commit: new(li)},
+		{From: new(uint64(1)), To: new(uint64(3)), Term: new(uint64(1)), Type: new(pb.MessageType_MsgApp), Index: new(li), LogTerm: new(uint64(1)), Entries: pb.EntrySliceToPointers(wents), Commit: new(li)},
 	}, msgs)
 	assert.Equal(t, []pb.Entry{
 		{Index: new(li + 1), Term: new(uint64(1)), Data: []byte("some data")},
@@ -532,7 +532,7 @@ func TestFollowerCommitEntry(t *testing.T) {
 		r := newTestRaft(1, 10, 1, newTestMemoryStorage(withPeers(1, 2, 3)))
 		r.becomeFollower(1, 2)
 
-		r.Step(pb.Message{From: new(uint64(2)), To: new(uint64(1)), Type: new(pb.MessageType_MsgApp), Term: new(uint64(1)), Entries: pb.EntrySliceToPointers(tt.ents), Commit: new(uint64(tt.commit))})
+		r.Step(pb.Message{From: new(uint64(2)), To: new(uint64(1)), Type: new(pb.MessageType_MsgApp), Term: new(uint64(1)), Entries: pb.EntrySliceToPointers(tt.ents), Commit: new(tt.commit)})
 
 		assert.Equal(t, tt.commit, r.raftLog.committed, "#%d", i)
 		assert.Equal(t, tt.ents[:int(tt.commit)], r.raftLog.nextCommittedEnts(true), "#%d", i)
@@ -572,14 +572,14 @@ func TestFollowerCheckMsgApp(t *testing.T) {
 		r.loadState(pb.HardState{Commit: 1})
 		r.becomeFollower(2, 2)
 
-		r.Step(pb.Message{From: new(uint64(2)), To: new(uint64(1)), Type: new(pb.MessageType_MsgApp), Term: new(uint64(2)), LogTerm: new(uint64(tt.term)), Index: new(uint64(tt.index))})
+		r.Step(pb.Message{From: new(uint64(2)), To: new(uint64(1)), Type: new(pb.MessageType_MsgApp), Term: new(uint64(2)), LogTerm: new(tt.term), Index: new(tt.index)})
 
-	expected := pb.Message{From: new(uint64(1)), To: new(uint64(2)), Type: new(pb.MessageType_MsgAppResp), Term: new(uint64(2)), Index: new(uint64(tt.windex))}
-	if tt.wreject {
-		expected.Reject = new(true)
-		expected.RejectHint = new(tt.wrejectHint)
-		expected.LogTerm = new(tt.wlogterm)
-	}
+		expected := pb.Message{From: new(uint64(1)), To: new(uint64(2)), Type: new(pb.MessageType_MsgAppResp), Term: new(uint64(2)), Index: new(tt.windex)}
+		if tt.wreject {
+			expected.Reject = new(true)
+			expected.RejectHint = new(tt.wrejectHint)
+			expected.LogTerm = new(tt.wlogterm)
+		}
 		assert.Equal(t, []pb.Message{expected}, r.readMessages(), "#%d", i)
 	}
 }
@@ -627,7 +627,7 @@ func TestFollowerAppendEntries(t *testing.T) {
 		r := newTestRaft(1, 10, 1, storage)
 		r.becomeFollower(2, 2)
 
-		r.Step(pb.Message{From: new(uint64(2)), To: new(uint64(1)), Type: new(pb.MessageType_MsgApp), Term: new(uint64(2)), LogTerm: new(uint64(tt.term)), Index: new(uint64(tt.index)), Entries: pb.EntrySliceToPointers(tt.ents)})
+		r.Step(pb.Message{From: new(uint64(2)), To: new(uint64(1)), Type: new(pb.MessageType_MsgApp), Term: new(uint64(2)), LogTerm: new(tt.term), Index: new(tt.index), Entries: pb.EntrySliceToPointers(tt.ents)})
 
 		assert.Equal(t, tt.wents, r.raftLog.allEntries(), "#%d", i)
 		assert.Equal(t, tt.wunstable, r.raftLog.nextUnstableEnts(), "#%d", i)
@@ -663,7 +663,7 @@ func TestLeaderSyncFollowerLog(t *testing.T) {
 		n.send(pb.Message{From: new(uint64(1)), To: new(uint64(1)), Type: new(pb.MessageType_MsgHup)})
 		// The election occurs in the term after the one we loaded with
 		// lead.loadState above.
-		n.send(pb.Message{From: new(uint64(3)), To: new(uint64(1)), Type: new(pb.MessageType_MsgVoteResp), Term: new(uint64(term + 1))})
+		n.send(pb.Message{From: new(uint64(3)), To: new(uint64(1)), Type: new(pb.MessageType_MsgVoteResp), Term: new(term + 1)})
 
 		n.send(pb.Message{From: new(uint64(1)), To: new(uint64(1)), Type: new(pb.MessageType_MsgProp), Entries: []*pb.Entry{{}}})
 
@@ -685,7 +685,7 @@ func TestVoteRequest(t *testing.T) {
 	for j, tt := range tests {
 		r := newTestRaft(1, 10, 1, newTestMemoryStorage(withPeers(1, 2, 3)))
 		r.Step(pb.Message{
-			From: new(uint64(2)), To: new(uint64(1)), Type: new(pb.MessageType_MsgApp), Term: new(uint64(tt.wterm - 1)), LogTerm: new(uint64(0)), Index: new(uint64(0)), Entries: pb.EntrySliceToPointers(tt.ents),
+			From: new(uint64(2)), To: new(uint64(1)), Type: new(pb.MessageType_MsgApp), Term: new(tt.wterm - 1), LogTerm: new(uint64(0)), Index: new(uint64(0)), Entries: pb.EntrySliceToPointers(tt.ents),
 		})
 		r.readMessages()
 
@@ -737,7 +737,7 @@ func TestVoter(t *testing.T) {
 		storage.Append(tt.ents)
 		r := newTestRaft(1, 10, 1, storage)
 
-		r.Step(pb.Message{From: new(uint64(2)), To: new(uint64(1)), Type: new(pb.MessageType_MsgVote), Term: new(uint64(3)), LogTerm: new(uint64(tt.logterm)), Index: new(uint64(tt.index))})
+		r.Step(pb.Message{From: new(uint64(2)), To: new(uint64(1)), Type: new(pb.MessageType_MsgVote), Term: new(uint64(3)), LogTerm: new(tt.logterm), Index: new(tt.index)})
 
 		msgs := r.readMessages()
 		require.Len(t, msgs, 1, "#%d", i)
@@ -774,7 +774,7 @@ func TestLeaderOnlyCommitsLogFromCurrentTerm(t *testing.T) {
 		// propose a entry to current term
 		r.Step(pb.Message{From: new(uint64(1)), To: new(uint64(1)), Type: new(pb.MessageType_MsgProp), Entries: []*pb.Entry{{}}})
 
-		r.Step(pb.Message{From: new(uint64(2)), To: new(uint64(1)), Type: new(pb.MessageType_MsgAppResp), Term: new(uint64(r.Term)), Index: new(uint64(tt.index))})
+		r.Step(pb.Message{From: new(uint64(2)), To: new(uint64(1)), Type: new(pb.MessageType_MsgAppResp), Term: new(r.Term), Index: new(tt.index)})
 		r.advanceMessagesAfterAppend()
 		assert.Equal(t, tt.wcommit, r.raftLog.committed, "#%d", i)
 	}
@@ -811,10 +811,10 @@ func acceptAndReply(m pb.Message) pb.Message {
 		panic("type should be MsgApp")
 	}
 	return pb.Message{
-		From:  new(uint64(m.GetTo())),
-		To:    new(uint64(m.GetFrom())),
-		Term:  new(uint64(m.GetTerm())),
+		From:  new(m.GetTo()),
+		To:    new(m.GetFrom()),
+		Term:  new(m.GetTerm()),
 		Type:  new(pb.MessageType_MsgAppResp),
-		Index: new(uint64(m.GetIndex() + uint64(len(m.GetEntries())))),
+		Index: new(m.GetIndex() + uint64(len(m.GetEntries()))),
 	}
 }
