@@ -153,7 +153,7 @@ func waitCommitConverge(ns []*node, target uint64) bool {
 		var good int
 
 		for _, n := range ns {
-			commit := n.Node.Status().HardState.Commit
+			commit := n.Node.Status().HardState.GetCommit()
 			c[commit] = struct{}{}
 			if commit > target {
 				good++
