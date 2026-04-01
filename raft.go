@@ -1150,9 +1150,9 @@ func (r *raft) Step(m pb.Message) error {
 			// we drop messages with a lower term.
 			last := r.raftLog.lastEntryID()
 			// TODO(pav-kv): it should be ok to simply print %+v of the lastEntryID.
-		r.logger.Infof("%x [logterm: %d, index: %d, vote: %x] rejected %s from %x [logterm: %d, index: %d] at term %d",
-			r.id, last.term, last.index, r.Vote, m.GetType(), m.GetFrom(), m.GetLogTerm(), m.GetIndex(), r.Term)
-		r.send(pb.Message{To: new(m.GetFrom()), Term: new(r.Term), Type: new(pb.MessageType_MsgPreVoteResp), Reject: new(true)})
+			r.logger.Infof("%x [logterm: %d, index: %d, vote: %x] rejected %s from %x [logterm: %d, index: %d] at term %d",
+				r.id, last.term, last.index, r.Vote, m.GetType(), m.GetFrom(), m.GetLogTerm(), m.GetIndex(), r.Term)
+			r.send(pb.Message{To: new(m.GetFrom()), Term: new(r.Term), Type: new(pb.MessageType_MsgPreVoteResp), Reject: new(true)})
 		} else if m.GetType() == pb.MessageType_MsgStorageAppendResp {
 			if m.GetIndex() != 0 {
 				// Don't consider the appended log entries to be stable because
@@ -1246,9 +1246,9 @@ func (r *raft) Step(m pb.Message) error {
 				r.Vote = m.GetFrom()
 			}
 		} else {
-		r.logger.Infof("%x [logterm: %d, index: %d, vote: %x] rejected %s from %x [logterm: %d, index: %d] at term %d",
-			r.id, lastID.term, lastID.index, r.Vote, m.GetType(), m.GetFrom(), candLastID.term, candLastID.index, r.Term)
-		r.send(pb.Message{To: new(m.GetFrom()), Term: new(r.Term), Type: new(voteRespMsgType(m.GetType())), Reject: new(true)})
+			r.logger.Infof("%x [logterm: %d, index: %d, vote: %x] rejected %s from %x [logterm: %d, index: %d] at term %d",
+				r.id, lastID.term, lastID.index, r.Vote, m.GetType(), m.GetFrom(), candLastID.term, candLastID.index, r.Term)
+			r.send(pb.Message{To: new(m.GetFrom()), Term: new(r.Term), Type: new(voteRespMsgType(m.GetType())), Reject: new(true)})
 		}
 
 	default:
@@ -1296,10 +1296,10 @@ func stepLeader(r *raft, m pb.Message) error {
 			return ErrProposalDropped
 		}
 
-	for i := range m.GetEntries() {
-		e := m.GetEntries()[i]
-		var cc pb.ConfChangeI
-		if e.GetType() == pb.EntryType_EntryConfChange {
+		for i := range m.GetEntries() {
+			e := m.GetEntries()[i]
+			var cc pb.ConfChangeI
+			if e.GetType() == pb.EntryType_EntryConfChange {
 				var ccc pb.ConfChange
 				if err := ccc.Unmarshal(e.GetData()); err != nil {
 					panic(err)
@@ -1326,10 +1326,10 @@ func stepLeader(r *raft, m pb.Message) error {
 					failedCheck = "not in joint state; refusing empty conf change"
 				}
 
-			if failedCheck != "" && !r.disableConfChangeValidation {
-				r.logger.Infof("%x ignoring conf change %v at config %s: %s", r.id, cc, r.trk.Config, failedCheck)
-				m.Entries[i] = &pb.Entry{Type: pb.EntryType_EntryNormal.Enum()}
-			} else {
+				if failedCheck != "" && !r.disableConfChangeValidation {
+					r.logger.Infof("%x ignoring conf change %v at config %s: %s", r.id, cc, r.trk.Config, failedCheck)
+					m.Entries[i] = &pb.Entry{Type: pb.EntryType_EntryNormal.Enum()}
+				} else {
 					r.pendingConfIndex = r.raftLog.lastIndex() + uint64(i) + 1
 					traceChangeConfEvent(cc, r)
 				}
@@ -1712,11 +1712,11 @@ func stepFollower(r *raft, m pb.Message) error {
 			r.logger.Infof("%x no leader at term %d; dropping proposal", r.id, r.Term)
 			return ErrProposalDropped
 		} else if r.disableProposalForwarding {
-		r.logger.Infof("%x not forwarding to leader %x at term %d; dropping proposal", r.id, r.lead, r.Term)
-		return ErrProposalDropped
-	}
-	m.To = new(r.lead)
-	r.send(m)
+			r.logger.Infof("%x not forwarding to leader %x at term %d; dropping proposal", r.id, r.lead, r.Term)
+			return ErrProposalDropped
+		}
+		m.To = new(r.lead)
+		r.send(m)
 	case pb.MessageType_MsgApp:
 		r.electionElapsed = 0
 		r.lead = m.GetFrom()
@@ -1731,11 +1731,11 @@ func stepFollower(r *raft, m pb.Message) error {
 		r.handleSnapshot(m)
 	case pb.MessageType_MsgTransferLeader:
 		if r.lead == None {
-		r.logger.Infof("%x no leader at term %d; dropping leader transfer msg", r.id, r.Term)
-		return nil
-	}
-	m.To = new(r.lead)
-	r.send(m)
+			r.logger.Infof("%x no leader at term %d; dropping leader transfer msg", r.id, r.Term)
+			return nil
+		}
+		m.To = new(r.lead)
+		r.send(m)
 	case pb.MessageType_MsgForgetLeader:
 		if r.readOnly.option == ReadOnlyLeaseBased {
 			r.logger.Error("ignoring MsgForgetLeader due to ReadOnlyLeaseBased")
@@ -1753,11 +1753,11 @@ func stepFollower(r *raft, m pb.Message) error {
 		r.hup(campaignTransfer)
 	case pb.MessageType_MsgReadIndex:
 		if r.lead == None {
-		r.logger.Infof("%x no leader at term %d; dropping index reading msg", r.id, r.Term)
-		return nil
-	}
-	m.To = new(r.lead)
-	r.send(m)
+			r.logger.Infof("%x no leader at term %d; dropping index reading msg", r.id, r.Term)
+			return nil
+		}
+		m.To = new(r.lead)
+		r.send(m)
 	case pb.MessageType_MsgReadIndexResp:
 		if len(m.GetEntries()) != 1 {
 			r.logger.Errorf("%x invalid format of MsgReadIndexResp from %x, entries count: %d", r.id, m.GetFrom(), len(m.GetEntries()))
