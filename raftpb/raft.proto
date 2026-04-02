@@ -162,8 +162,8 @@ message ConfChange {
 // ConfChangeSingle is an individual configuration change operation. Multiple
 // such operations can be carried out atomically via a ConfChangeV2.
 message ConfChangeSingle {
-	optional ConfChangeType  type    = 1 [(gogoproto.nullable) = false];
-	optional uint64          node_id = 2 [(gogoproto.nullable) = false];
+	optional ConfChangeType  type    = 1;
+	optional uint64          node_id = 2;
 }
 
 // ConfChangeV2 messages initiate configuration changes. They support both the
