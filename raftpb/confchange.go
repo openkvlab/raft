@@ -56,8 +56,8 @@ func MarshalConfChange(c ConfChangeI) (EntryType, []byte, error) {
 func (c ConfChange) AsV2() ConfChangeV2 {
 	return ConfChangeV2{
 		Changes: []ConfChangeSingle{{
-			Type:   c.GetType(),
-			NodeId: c.GetNodeId(),
+			Type:   c.GetType().Enum(),
+			NodeId: new(c.GetNodeId()),
 		}},
 		Context: c.Context,
 	}
@@ -131,13 +131,13 @@ func ConfChangesFromString(s string) ([]ConfChangeSingle, error) {
 		var cc ConfChangeSingle
 		switch tok[0] {
 		case 'v':
-			cc.Type = ConfChangeType_ConfChangeAddNode
+			cc.Type = ConfChangeType_ConfChangeAddNode.Enum()
 		case 'l':
-			cc.Type = ConfChangeType_ConfChangeAddLearnerNode
+			cc.Type = ConfChangeType_ConfChangeAddLearnerNode.Enum()
 		case 'r':
-			cc.Type = ConfChangeType_ConfChangeRemoveNode
+			cc.Type = ConfChangeType_ConfChangeRemoveNode.Enum()
 		case 'u':
-			cc.Type = ConfChangeType_ConfChangeUpdateNode
+			cc.Type = ConfChangeType_ConfChangeUpdateNode.Enum()
 		default:
 			return nil, fmt.Errorf("unknown input: %s", tok)
 		}
@@ -145,7 +145,7 @@ func ConfChangesFromString(s string) ([]ConfChangeSingle, error) {
 		if err != nil {
 			return nil, err
 		}
-		cc.NodeId = id
+		cc.NodeId = new(id)
 		ccs = append(ccs, cc)
 	}
 	return ccs, nil
@@ -158,7 +158,7 @@ func ConfChangesToString(ccs []ConfChangeSingle) string {
 		if i > 0 {
 			buf.WriteByte(' ')
 		}
-		switch cc.Type {
+		switch cc.GetType() {
 		case ConfChangeType_ConfChangeAddNode:
 			buf.WriteByte('v')
 		case ConfChangeType_ConfChangeAddLearnerNode:
@@ -170,7 +170,7 @@ func ConfChangesToString(ccs []ConfChangeSingle) string {
 		default:
 			buf.WriteString("unknown")
 		}
-		fmt.Fprintf(&buf, "%d", cc.NodeId)
+		fmt.Fprintf(&buf, "%d", cc.GetNodeId())
 	}
 	return buf.String()
 }
