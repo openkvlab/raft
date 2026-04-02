@@ -1327,7 +1327,8 @@ func stepLeader(r *raft, m pb.Message) error {
 				}
 
 				if failedCheck != "" && !r.disableConfChangeValidation {
-					r.logger.Infof("%x ignoring conf change %v at config %s: %s", r.id, cc, r.trk.Config, failedCheck)
+					v2cc := cc.AsV2()
+					r.logger.Infof("%x ignoring conf change %s at config %s: %s", r.id, v2cc.String(), r.trk.Config, failedCheck)
 					m.Entries[i] = &pb.Entry{Type: pb.EntryType_EntryNormal.Enum()}
 				} else {
 					r.pendingConfIndex = r.raftLog.lastIndex() + uint64(i) + 1
