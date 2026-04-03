@@ -199,7 +199,7 @@ message ConfChangeSingle {
 //
 // [1]: https://github.com/ongardie/dissertation/blob/master/online-trim.pdf
 message ConfChangeV2 {
-	optional ConfChangeTransition transition = 1 [(gogoproto.nullable) = false];
-	repeated ConfChangeSingle     changes =    2 [(gogoproto.nullable) = false];
+	optional ConfChangeTransition transition = 1;
+	repeated ConfChangeSingle     changes =    2;
 	optional bytes                context =    3;
 }
