@@ -23,7 +23,7 @@ import (
 // first the config that will become the outgoing one, and then the incoming one, and
 // b) another slice that, when applied to the config resulted from 1), represents the
 // ConfState.
-func toConfChangeSingle(cs pb.ConfState) (out []pb.ConfChangeSingle, in []pb.ConfChangeSingle) {
+func toConfChangeSingle(cs pb.ConfState) (out []*pb.ConfChangeSingle, in []*pb.ConfChangeSingle) {
 	// Example to follow along this code:
 	// voters=(1 2 3) learners=(5) outgoing=(1 2 4 6) learners_next=(4)
 	//
@@ -55,7 +55,7 @@ func toConfChangeSingle(cs pb.ConfState) (out []pb.ConfChangeSingle, in []pb.Con
 	for _, id := range cs.VotersOutgoing {
 		// If there are outgoing voters, first add them one by one so that the
 		// (non-joint) config has them all.
-		out = append(out, pb.ConfChangeSingle{
+		out = append(out, &pb.ConfChangeSingle{
 			Type:   pb.ConfChangeType_ConfChangeAddNode.Enum(),
 			NodeId: new(id),
 		})
@@ -67,20 +67,20 @@ func toConfChangeSingle(cs pb.ConfState) (out []pb.ConfChangeSingle, in []pb.Con
 
 	// First, we'll remove all of the outgoing voters.
 	for _, id := range cs.VotersOutgoing {
-		in = append(in, pb.ConfChangeSingle{
+		in = append(in, &pb.ConfChangeSingle{
 			Type:   pb.ConfChangeType_ConfChangeRemoveNode.Enum(),
 			NodeId: new(id),
 		})
 	}
 	// Then we'll add the incoming voters and learners.
 	for _, id := range cs.Voters {
-		in = append(in, pb.ConfChangeSingle{
+		in = append(in, &pb.ConfChangeSingle{
 			Type:   pb.ConfChangeType_ConfChangeAddNode.Enum(),
 			NodeId: new(id),
 		})
 	}
 	for _, id := range cs.Learners {
-		in = append(in, pb.ConfChangeSingle{
+		in = append(in, &pb.ConfChangeSingle{
 			Type:   pb.ConfChangeType_ConfChangeAddLearnerNode.Enum(),
 			NodeId: new(id),
 		})
@@ -88,7 +88,7 @@ func toConfChangeSingle(cs pb.ConfState) (out []pb.ConfChangeSingle, in []pb.Con
 	// Same for LearnersNext; these are nodes we want to be learners but which
 	// are currently voters in the outgoing config.
 	for _, id := range cs.LearnersNext {
-		in = append(in, pb.ConfChangeSingle{
+		in = append(in, &pb.ConfChangeSingle{
 			Type:   pb.ConfChangeType_ConfChangeAddLearnerNode.Enum(),
 			NodeId: new(id),
 		})
@@ -124,7 +124,6 @@ func Restore(chg Changer, cs pb.ConfState) (tracker.Config, tracker.ProgressMap,
 	if len(outgoing) == 0 {
 		// No outgoing config, so just apply the incoming changes one by one.
 		for _, cc := range incoming {
-			cc := cc // loop-local copy
 			ops = append(ops, func(chg Changer) (tracker.Config, tracker.ProgressMap, error) {
 				return chg.Simple(cc)
 			})
@@ -136,7 +135,6 @@ func Restore(chg Changer, cs pb.ConfState) (tracker.Config, tracker.ProgressMap,
 		// that it temporarily becomes the incoming active config. For example,
 		// if the config is (1 2 3)&(2 3 4), this will establish (2 3 4)&().
 		for _, cc := range outgoing {
-			cc := cc // loop-local copy
 			ops = append(ops, func(chg Changer) (tracker.Config, tracker.ProgressMap, error) {
 				return chg.Simple(cc)
 			})

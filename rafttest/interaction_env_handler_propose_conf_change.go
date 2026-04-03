@@ -70,7 +70,7 @@ func (env *InteractionEnv) handleProposeConfChange(t *testing.T, d datadriven.Te
 		}
 	} else {
 		c = raftpb.ConfChangeV2{
-			Transition: transition,
+			Transition: transition.Enum(),
 			Changes:    ccs,
 		}
 	}

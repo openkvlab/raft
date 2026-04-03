@@ -55,7 +55,7 @@ func MarshalConfChange(c ConfChangeI) (EntryType, []byte, error) {
 // AsV2 returns a V2 configuration change carrying out the same operation.
 func (c ConfChange) AsV2() ConfChangeV2 {
 	return ConfChangeV2{
-		Changes: []ConfChangeSingle{{
+		Changes: []*ConfChangeSingle{{
 			Type:   c.GetType().Enum(),
 			NodeId: new(c.GetNodeId()),
 		}},
@@ -86,10 +86,10 @@ func (c ConfChangeV2) EnterJoint() (autoLeave bool, ok bool) {
 	// base config (i.e. two voters are turned into learners in the process of
 	// applying the conf change). In practice, these distinctions should not
 	// matter, so we keep it simple and use Joint Consensus liberally.
-	if c.Transition != ConfChangeTransition_ConfChangeTransitionAuto || len(c.Changes) > 1 {
+	if c.GetTransition() != ConfChangeTransition_ConfChangeTransitionAuto || len(c.Changes) > 1 {
 		// Use Joint Consensus.
 		var autoLeave bool
-		switch c.Transition {
+		switch c.GetTransition() {
 		case ConfChangeTransition_ConfChangeTransitionAuto:
 			autoLeave = true
 		case ConfChangeTransition_ConfChangeTransitionJointImplicit:
@@ -118,8 +118,8 @@ func (c ConfChangeV2) LeaveJoint() bool {
 // - ln: make n a learner,
 // - rn: remove n, and
 // - un: update n.
-func ConfChangesFromString(s string) ([]ConfChangeSingle, error) {
-	var ccs []ConfChangeSingle
+func ConfChangesFromString(s string) ([]*ConfChangeSingle, error) {
+	var ccs []*ConfChangeSingle
 	toks := strings.Split(strings.TrimSpace(s), " ")
 	if toks[0] == "" {
 		toks = nil
@@ -146,13 +146,13 @@ func ConfChangesFromString(s string) ([]ConfChangeSingle, error) {
 			return nil, err
 		}
 		cc.NodeId = new(id)
-		ccs = append(ccs, cc)
+		ccs = append(ccs, &cc)
 	}
 	return ccs, nil
 }
 
 // ConfChangesToString is the inverse to ConfChangesFromString.
-func ConfChangesToString(ccs []ConfChangeSingle) string {
+func ConfChangesToString(ccs []*ConfChangeSingle) string {
 	var buf strings.Builder
 	for i, cc := range ccs {
 		if i > 0 {
