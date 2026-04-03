@@ -1,8 +1,6 @@
 syntax = "proto2";
 package raftpb;
 
-import "gogoproto/gogo.proto";
-
 enum EntryType {
 	EntryNormal       = 0;
 	EntryConfChange   = 1; // corresponds to pb.ConfChange
