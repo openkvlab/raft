@@ -38,9 +38,6 @@ for dir in ${DIRS}; do
     --plugin=protoc-gen-go="${GOGEN_BIN}" \
     --go_opt=paths=source_relative ./**/*.proto
 
-    sed -i.bak -E 's|"raft/raftpb"|"github.com/openkvlab/raft/raftpb"|g' ./**/*.pb.go
-    sed -i.bak -E 's|"google/protobuf"|"github.com/gogo/protobuf/protoc-gen-gogo/descriptor"|g' ./**/*.pb.go
-
     rm -f ./**/*.bak
     gofmt -s -w ./**/*.pb.go
     run_go_tool "golang.org/x/tools/cmd/goimports" -w ./**/*.pb.go
