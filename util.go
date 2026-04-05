@@ -104,7 +104,7 @@ func DescribeConfState(state *pb.ConfState) string {
 	)
 }
 
-func DescribeSnapshot(snap pb.Snapshot) string {
+func DescribeSnapshot(snap *pb.Snapshot) string {
 	m := snap.GetMetadata()
 	return fmt.Sprintf("Index:%d Term:%d ConfState:%s", m.GetIndex(), m.GetTerm(), DescribeConfState(m.GetConfState()))
 }
@@ -179,8 +179,8 @@ func describeMessageWithIndent(indent string, m pb.Message, f EntryFormatter) st
 		}
 		fmt.Fprintf(&buf, "\n%s]", indent)
 	}
-	if s := m.GetSnapshot(); s != nil && !IsEmptySnap(*s) {
-		fmt.Fprintf(&buf, "\n%s  Snapshot: %s", indent, DescribeSnapshot(*s))
+	if s := m.GetSnapshot(); !IsEmptySnap(s) {
+		fmt.Fprintf(&buf, "\n%s  Snapshot: %s", indent, DescribeSnapshot(s))
 	}
 	if len(m.GetResponses()) > 0 {
 		fmt.Fprintf(&buf, " Responses:[")

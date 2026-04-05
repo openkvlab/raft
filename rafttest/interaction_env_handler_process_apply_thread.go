@@ -95,8 +95,8 @@ func processApply(n *Node, ents []*raftpb.Entry) error {
 		// Record the new state by starting with the current state and applying
 		// the command.
 		lastSnap := n.History[len(n.History)-1]
-		var snap raftpb.Snapshot
-		raftpb.EnsureSnapshot(&snap)
+		snap := &raftpb.Snapshot{}
+		raftpb.EnsureSnapshot(snap)
 		snap.Data = append(snap.Data, lastSnap.Data...)
 		// NB: this hard-codes an "appender" state machine.
 		snap.Data = append(snap.Data, update...)

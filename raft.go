@@ -689,7 +689,7 @@ func (r *raft) maybeSendSnapshot(to uint64, pr *tracker.Progress) bool {
 	pr.BecomeSnapshot(sindex)
 	r.logger.Debugf("%x paused sending replication messages to %x [%s]", r.id, to, pr)
 
-	r.send(pb.Message{To: new(to), Type: new(pb.MessageType_MsgSnap), Snapshot: &snapshot})
+	r.send(pb.Message{To: new(to), Type: new(pb.MessageType_MsgSnap), Snapshot: snapshot})
 	return true
 }
 
@@ -1832,9 +1832,9 @@ func (r *raft) handleHeartbeat(m pb.Message) {
 func (r *raft) handleSnapshot(m pb.Message) {
 	// MsgSnap messages should always carry a non-nil Snapshot, but err on the
 	// side of safety and treat a nil Snapshot as a zero-valued Snapshot.
-	var s pb.Snapshot
-	if m.GetSnapshot() != nil {
-		s = *m.GetSnapshot()
+	s := m.GetSnapshot()
+	if s == nil {
+		s = &pb.Snapshot{}
 	}
 	sindex, sterm := s.GetMetadata().GetIndex(), s.GetMetadata().GetTerm()
 	if r.restore(s) {
@@ -1851,7 +1851,7 @@ func (r *raft) handleSnapshot(m pb.Message) {
 // restore recovers the state machine from a snapshot. It restores the log and the
 // configuration of state machine. If this method returns false, the snapshot was
 // ignored, either because it was obsolete or because of an error.
-func (r *raft) restore(s pb.Snapshot) bool {
+func (r *raft) restore(s *pb.Snapshot) bool {
 	if s.GetMetadata().GetIndex() <= r.raftLog.committed {
 		return false
 	}

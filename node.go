@@ -84,7 +84,7 @@ type Ready struct {
 	// If async storage writes are enabled, this field does not need to be acted
 	// on immediately. It will be reflected in a MsgStorageAppend message in the
 	// Messages slice.
-	Snapshot pb.Snapshot
+	Snapshot *pb.Snapshot
 
 	// CommittedEntries specifies entries to be committed to a
 	// store/state-machine. These have previously been appended to stable
@@ -123,9 +123,9 @@ func IsEmptyHardState(st pb.HardState) bool {
 	return isHardStateEqual(st, emptyState)
 }
 
-// IsEmptySnap returns true if the given Snapshot is empty.
-func IsEmptySnap(sp pb.Snapshot) bool {
-	return sp.GetMetadata().GetIndex() == 0
+// IsEmptySnap returns true if the given Snapshot is nil or empty.
+func IsEmptySnap(sp *pb.Snapshot) bool {
+	return sp == nil || sp.GetMetadata().GetIndex() == 0
 }
 
 // Node represents a node in a raft cluster.

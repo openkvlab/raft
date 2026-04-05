@@ -90,7 +90,7 @@ func TestFindConflictByTerm(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			st := NewMemoryStorage()
 			require.NotEmpty(t, tt.ents)
-			st.ApplySnapshot(pb.Snapshot{
+			st.ApplySnapshot(&pb.Snapshot{
 				Metadata: &pb.SnapshotMetadata{
 					Index: new(tt.ents[0].GetIndex()),
 					Term:  new(tt.ents[0].GetTerm()),
@@ -365,7 +365,7 @@ func TestCompactionSideEffects(t *testing.T) {
 }
 
 func TestHasNextCommittedEnts(t *testing.T) {
-	snap := pb.Snapshot{
+	snap := &pb.Snapshot{
 		Metadata: &pb.SnapshotMetadata{Term: new(uint64(1)), Index: new(uint64(3))},
 	}
 	ents := index(4).terms(1, 1, 1)
@@ -409,9 +409,9 @@ func TestHasNextCommittedEnts(t *testing.T) {
 			raftLog.acceptApplying(tt.applying, 0 /* size */, tt.allowUnstable)
 			raftLog.applyingEntsPaused = tt.paused
 			if tt.snap {
-				newSnap := snap
+				newSnap := *snap
 				newSnap.Metadata.Index = new(newSnap.GetMetadata().GetIndex() + 1)
-				raftLog.restore(newSnap)
+				raftLog.restore(&newSnap)
 			}
 			require.Equal(t, tt.whasNext, raftLog.hasNextCommittedEnts(tt.allowUnstable))
 		})
@@ -419,7 +419,7 @@ func TestHasNextCommittedEnts(t *testing.T) {
 }
 
 func TestNextCommittedEnts(t *testing.T) {
-	snap := pb.Snapshot{
+	snap := &pb.Snapshot{
 		Metadata: &pb.SnapshotMetadata{Term: new(uint64(1)), Index: new(uint64(3))},
 	}
 	ents := index(4).terms(1, 1, 1)
@@ -463,9 +463,9 @@ func TestNextCommittedEnts(t *testing.T) {
 			raftLog.acceptApplying(tt.applying, 0 /* size */, tt.allowUnstable)
 			raftLog.applyingEntsPaused = tt.paused
 			if tt.snap {
-				newSnap := snap
+				newSnap := *snap
 				newSnap.Metadata.Index = new(newSnap.GetMetadata().GetIndex() + 1)
-				raftLog.restore(newSnap)
+				raftLog.restore(&newSnap)
 			}
 			require.Equal(t, tt.wents, raftLog.nextCommittedEnts(tt.allowUnstable))
 		})
@@ -474,7 +474,7 @@ func TestNextCommittedEnts(t *testing.T) {
 
 func TestAcceptApplying(t *testing.T) {
 	maxSize := entryEncodingSize(100)
-	snap := pb.Snapshot{
+	snap := &pb.Snapshot{
 		Metadata: &pb.SnapshotMetadata{Term: new(uint64(1)), Index: new(uint64(3))},
 	}
 	ents := index(4).terms(1, 1, 1)
@@ -525,7 +525,7 @@ func TestAcceptApplying(t *testing.T) {
 func TestAppliedTo(t *testing.T) {
 	maxSize := entryEncodingSize(100)
 	overshoot := entryEncodingSize(5)
-	snap := pb.Snapshot{
+	snap := &pb.Snapshot{
 		Metadata: &pb.SnapshotMetadata{Term: new(uint64(1)), Index: new(uint64(3))},
 	}
 	ents := index(4).terms(1, 1, 1)
@@ -680,7 +680,7 @@ func TestStableToWithSnap(t *testing.T) {
 	for i, tt := range tests {
 		t.Run(fmt.Sprint(i), func(t *testing.T) {
 			s := NewMemoryStorage()
-			require.NoError(t, s.ApplySnapshot(pb.Snapshot{Metadata: &pb.SnapshotMetadata{Index: new(snapi), Term: new(snapt)}}))
+			require.NoError(t, s.ApplySnapshot(&pb.Snapshot{Metadata: &pb.SnapshotMetadata{Index: new(snapi), Term: new(snapt)}}))
 			raftLog := newLog(s, raftLogger)
 			raftLog.append(tt.newEnts...)
 			raftLog.stableTo(entryID{term: tt.stablet, index: tt.stablei})
@@ -734,7 +734,7 @@ func TestLogRestore(t *testing.T) {
 	term := uint64(1000)
 	snap := &pb.SnapshotMetadata{Index: new(index), Term: new(term)}
 	storage := NewMemoryStorage()
-	storage.ApplySnapshot(pb.Snapshot{Metadata: snap})
+	storage.ApplySnapshot(&pb.Snapshot{Metadata: snap})
 	raftLog := newLog(storage, raftLogger)
 
 	require.Zero(t, len(raftLog.allEntries()))
@@ -748,7 +748,7 @@ func TestIsOutOfBounds(t *testing.T) {
 	offset := uint64(100)
 	num := uint64(100)
 	storage := NewMemoryStorage()
-	storage.ApplySnapshot(pb.Snapshot{Metadata: &pb.SnapshotMetadata{Index: new(offset)}})
+	storage.ApplySnapshot(&pb.Snapshot{Metadata: &pb.SnapshotMetadata{Index: new(offset)}})
 	l := newLog(storage, raftLogger)
 	l.append(index(offset+1).termRange(offset+1, offset+num+1)...)
 
@@ -820,7 +820,7 @@ func TestTerm(t *testing.T) {
 	num := uint64(100)
 
 	storage := NewMemoryStorage()
-	storage.ApplySnapshot(pb.Snapshot{Metadata: &pb.SnapshotMetadata{Index: new(offset), Term: new(uint64(1))}})
+	storage.ApplySnapshot(&pb.Snapshot{Metadata: &pb.SnapshotMetadata{Index: new(offset), Term: new(uint64(1))}})
 	l := newLog(storage, raftLogger)
 	l.append(index(offset+1).termRange(1, num)...)
 
@@ -848,9 +848,9 @@ func TestTermWithUnstableSnapshot(t *testing.T) {
 	unstablesnapi := storagesnapi + 5
 
 	storage := NewMemoryStorage()
-	storage.ApplySnapshot(pb.Snapshot{Metadata: &pb.SnapshotMetadata{Index: new(storagesnapi), Term: new(uint64(1))}})
+	storage.ApplySnapshot(&pb.Snapshot{Metadata: &pb.SnapshotMetadata{Index: new(storagesnapi), Term: new(uint64(1))}})
 	l := newLog(storage, raftLogger)
-	l.restore(pb.Snapshot{Metadata: &pb.SnapshotMetadata{Index: new(unstablesnapi), Term: new(uint64(1))}})
+	l.restore(&pb.Snapshot{Metadata: &pb.SnapshotMetadata{Index: new(unstablesnapi), Term: new(uint64(1))}})
 
 	for i, tt := range []struct {
 		idx  uint64
@@ -886,7 +886,7 @@ func TestSlice(t *testing.T) {
 	}
 
 	storage := NewMemoryStorage()
-	require.NoError(t, storage.ApplySnapshot(pb.Snapshot{
+	require.NoError(t, storage.ApplySnapshot(&pb.Snapshot{
 		Metadata: &pb.SnapshotMetadata{Index: new(offset)}}))
 	require.NoError(t, storage.Append(entries(offset+1, half)))
 	l := newLog(storage, raftLogger)
@@ -982,7 +982,7 @@ func TestScan(t *testing.T) {
 	entrySize := entsSize(entries(half, half+1))
 
 	storage := NewMemoryStorage()
-	require.NoError(t, storage.ApplySnapshot(pb.Snapshot{
+	require.NoError(t, storage.ApplySnapshot(&pb.Snapshot{
 		Metadata: &pb.SnapshotMetadata{Index: new(offset)}}))
 	require.NoError(t, storage.Append(entries(offset+1, half)))
 	l := newLog(storage, raftLogger)

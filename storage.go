@@ -89,7 +89,7 @@ type Storage interface {
 	// If snapshot is temporarily unavailable, it should return ErrSnapshotTemporarilyUnavailable,
 	// so raft state machine could know that Storage needs some time to prepare
 	// snapshot and call Snapshot later.
-	Snapshot() (pb.Snapshot, error)
+	Snapshot() (*pb.Snapshot, error)
 }
 
 type inMemStorageCallStats struct {
@@ -105,7 +105,7 @@ type MemoryStorage struct {
 	sync.Mutex
 
 	hardState pb.HardState
-	snapshot  pb.Snapshot
+	snapshot  *pb.Snapshot
 	// ents[i] has raft log position i+snapshot.GetMetadata().GetIndex()
 	ents []*pb.Entry
 
@@ -116,9 +116,10 @@ type MemoryStorage struct {
 func NewMemoryStorage() *MemoryStorage {
 	ms := &MemoryStorage{
 		// When starting from scratch populate the list with a dummy entry at term zero.
-		ents: []*pb.Entry{{}},
+		ents:     []*pb.Entry{{}},
+		snapshot: &pb.Snapshot{},
 	}
-	pb.EnsureSnapshot(&ms.snapshot)
+	pb.EnsureSnapshot(ms.snapshot)
 	return ms
 }
 
@@ -128,6 +129,14 @@ func (ms *MemoryStorage) InitialState() (pb.HardState, pb.ConfState, error) {
 	cs := ms.snapshot.GetMetadata().GetConfState()
 	cs = pb.EnsureConfState(cs)
 	return ms.hardState, *cs, nil
+}
+
+// ensureSnapshot initializes ms.snapshot if nil.
+func (ms *MemoryStorage) ensureSnapshot() {
+	if ms.snapshot == nil {
+		ms.snapshot = &pb.Snapshot{}
+		pb.EnsureSnapshot(ms.snapshot)
+	}
 }
 
 // SetHardState saves the current HardState.
@@ -202,16 +211,17 @@ func (ms *MemoryStorage) firstIndex() uint64 {
 }
 
 // Snapshot implements the Storage interface.
-func (ms *MemoryStorage) Snapshot() (pb.Snapshot, error) {
+func (ms *MemoryStorage) Snapshot() (*pb.Snapshot, error) {
 	ms.Lock()
 	defer ms.Unlock()
 	ms.callStats.snapshot++
+	ms.ensureSnapshot()
 	return ms.snapshot, nil
 }
 
 // ApplySnapshot overwrites the contents of this Storage object with
 // those of the given snapshot.
-func (ms *MemoryStorage) ApplySnapshot(snap pb.Snapshot) error {
+func (ms *MemoryStorage) ApplySnapshot(snap *pb.Snapshot) error {
 	ms.Lock()
 	defer ms.Unlock()
 
@@ -234,11 +244,11 @@ func (ms *MemoryStorage) ApplySnapshot(snap pb.Snapshot) error {
 // can be used to reconstruct the state at that point.
 // If any configuration changes have been made since the last compaction,
 // the result of the last ApplyConfChange must be passed in.
-func (ms *MemoryStorage) CreateSnapshot(i uint64, cs *pb.ConfState, data []byte) (pb.Snapshot, error) {
+func (ms *MemoryStorage) CreateSnapshot(i uint64, cs *pb.ConfState, data []byte) (*pb.Snapshot, error) {
 	ms.Lock()
 	defer ms.Unlock()
 	if i <= ms.snapshot.GetMetadata().GetIndex() {
-		return pb.Snapshot{}, ErrSnapOutOfDate
+		return nil, ErrSnapOutOfDate
 	}
 
 	offset := ms.ents[0].GetIndex()
@@ -246,7 +256,7 @@ func (ms *MemoryStorage) CreateSnapshot(i uint64, cs *pb.ConfState, data []byte)
 		getLogger().Panicf("snapshot %d is out of bound lastindex(%d)", i, ms.lastIndex())
 	}
 
-	pb.EnsureSnapshot(&ms.snapshot)
+	ms.ensureSnapshot()
 	ms.snapshot.Metadata.Index = new(i)
 	ms.snapshot.Metadata.Term = new(ms.ents[i-offset].GetTerm())
 	if cs != nil {

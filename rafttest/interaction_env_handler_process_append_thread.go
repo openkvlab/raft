@@ -62,10 +62,7 @@ func (env *InteractionEnv) ProcessAppendThread(idx int) error {
 		Vote:   new(m.GetVote()),
 		Commit: new(m.GetCommit()),
 	}
-	var snap raftpb.Snapshot
-	if m.GetSnapshot() != nil {
-		snap = *m.GetSnapshot()
-	}
+	snap := m.GetSnapshot()
 	if err := processAppend(n, st, m.Entries, snap); err != nil {
 		return err
 	}
@@ -78,7 +75,7 @@ func (env *InteractionEnv) ProcessAppendThread(idx int) error {
 	return nil
 }
 
-func processAppend(n *Node, st raftpb.HardState, ents []*raftpb.Entry, snap raftpb.Snapshot) error {
+func processAppend(n *Node, st raftpb.HardState, ents []*raftpb.Entry, snap *raftpb.Snapshot) error {
 	// TODO(tbg): the order of operations here is not necessarily safe. See:
 	// https://github.com/etcd-io/etcd/pull/10861
 	s := n.Storage
