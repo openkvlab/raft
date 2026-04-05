@@ -18,10 +18,10 @@ import (
 	pb "github.com/openkvlab/raft/raftpb"
 )
 
-func applyToStore(_ []pb.Entry)      {}
+func applyToStore(_ []*pb.Entry)     {}
 func sendMessages(_ []pb.Message)    {}
 func saveStateToDisk(_ pb.HardState) {}
-func saveToDisk(_ []pb.Entry)        {}
+func saveToDisk(_ []*pb.Entry)       {}
 
 func ExampleNode() {
 	c := &Config{}

@@ -65,7 +65,7 @@ func TestStorageEntries(t *testing.T) {
 		lo, hi, maxsize uint64
 
 		werr     error
-		wentries []pb.Entry
+		wentries []*pb.Entry
 	}{
 		{2, 6, math.MaxUint64, ErrCompacted, nil},
 		{3, 4, math.MaxUint64, ErrCompacted, nil},
@@ -75,12 +75,12 @@ func TestStorageEntries(t *testing.T) {
 		// even if maxsize is zero, the first entry should be returned
 		{4, 7, 0, nil, index(4).terms(4)},
 		// limit to 2
-		{4, 7, uint64(proto.Size(&ents[1]) + proto.Size(&ents[2])), nil, index(4).terms(4, 5)},
+		{4, 7, uint64(proto.Size(ents[1]) + proto.Size(ents[2])), nil, index(4).terms(4, 5)},
 		// limit to 2
-		{4, 7, uint64(proto.Size(&ents[1]) + proto.Size(&ents[2]) + proto.Size(&ents[3])/2), nil, index(4).terms(4, 5)},
-		{4, 7, uint64(proto.Size(&ents[1]) + proto.Size(&ents[2]) + proto.Size(&ents[3]) - 1), nil, index(4).terms(4, 5)},
+		{4, 7, uint64(proto.Size(ents[1]) + proto.Size(ents[2]) + proto.Size(ents[3])/2), nil, index(4).terms(4, 5)},
+		{4, 7, uint64(proto.Size(ents[1]) + proto.Size(ents[2]) + proto.Size(ents[3]) - 1), nil, index(4).terms(4, 5)},
 		// all
-		{4, 7, uint64(proto.Size(&ents[1]) + proto.Size(&ents[2]) + proto.Size(&ents[3])), nil, index(4).terms(4, 5, 6)},
+		{4, 7, uint64(proto.Size(ents[1]) + proto.Size(ents[2]) + proto.Size(ents[3])), nil, index(4).terms(4, 5, 6)},
 	}
 
 	for _, tt := range tests {
@@ -176,10 +176,10 @@ func TestStorageCreateSnapshot(t *testing.T) {
 func TestStorageAppend(t *testing.T) {
 	ents := index(3).terms(3, 4, 5)
 	tests := []struct {
-		entries []pb.Entry
+		entries []*pb.Entry
 
 		werr     error
-		wentries []pb.Entry
+		wentries []*pb.Entry
 	}{
 		{
 			index(1).terms(1, 2),

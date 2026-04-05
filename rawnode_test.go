@@ -81,7 +81,7 @@ func TestRawNodeStep(t *testing.T) {
 		t.Run(msgn, func(t *testing.T) {
 			s := NewMemoryStorage()
 			s.SetHardState(pb.HardState{Term: new(uint64(1)), Commit: new(uint64(1))})
-			s.Append([]pb.Entry{{Term: new(uint64(1)), Index: new(uint64(1))}})
+			s.Append([]*pb.Entry{{Term: new(uint64(1)), Index: new(uint64(1))}})
 			require.NoError(t, s.ApplySnapshot(pb.Snapshot{Metadata: &pb.SnapshotMetadata{
 				ConfState: &pb.ConfState{
 					Voters: []uint64{1},
@@ -568,7 +568,7 @@ func TestRawNodeReadIndex(t *testing.T) {
 // requires the application to bootstrap the state, i.e. it does not accept peers
 // and will not create faux configuration change entries.
 func TestRawNodeStart(t *testing.T) {
-	entries := []pb.Entry{
+	entries := []*pb.Entry{
 		{Term: new(uint64(1)), Index: new(uint64(2)), Data: nil},           // empty entry
 		{Term: new(uint64(1)), Index: new(uint64(3)), Data: []byte("foo")}, // non-empty entry
 	}
@@ -659,7 +659,7 @@ func TestRawNodeStart(t *testing.T) {
 }
 
 func TestRawNodeRestart(t *testing.T) {
-	entries := []pb.Entry{
+	entries := []*pb.Entry{
 		{Term: new(uint64(1)), Index: new(uint64(1))},
 		{Term: new(uint64(1)), Index: new(uint64(2)), Data: []byte("foo")},
 	}
@@ -691,7 +691,7 @@ func TestRawNodeRestartFromSnapshot(t *testing.T) {
 			Term:      new(uint64(1)),
 		},
 	}
-	entries := []pb.Entry{
+	entries := []*pb.Entry{
 		{Term: new(uint64(1)), Index: new(uint64(3)), Data: []byte("foo")},
 	}
 	st := pb.HardState{Term: new(uint64(1)), Commit: new(uint64(3))}
@@ -766,10 +766,10 @@ func TestRawNodeCommitPaginationAfterRestart(t *testing.T) {
 	}
 
 	s.hardState = persistedHardState
-	s.ents = make([]pb.Entry, 10)
+	s.ents = make([]*pb.Entry, 10)
 	var size uint64
 	for i := range s.ents {
-		ent := pb.Entry{
+		ent := &pb.Entry{
 			Term:  new(uint64(1)),
 			Index: new(uint64(i + 1)),
 			Type:  pb.EntryType_EntryNormal.Enum(),
@@ -777,16 +777,16 @@ func TestRawNodeCommitPaginationAfterRestart(t *testing.T) {
 		}
 
 		s.ents[i] = ent
-		size += uint64(proto.Size(&ent))
+		size += uint64(proto.Size(ent))
 	}
 
 	cfg := newTestConfig(1, 10, 1, s)
 	// Set a MaxSizePerMsg that would suggest to Raft that the last committed entry should
 	// not be included in the initial rd.CommittedEntries. However, our storage will ignore
 	// this and *will* return it (which is how the Commit index ended up being 10 initially).
-	cfg.MaxSizePerMsg = size - uint64(proto.Size(&s.ents[len(s.ents)-1])) - 1
+	cfg.MaxSizePerMsg = size - uint64(proto.Size(s.ents[len(s.ents)-1])) - 1
 
-	s.ents = append(s.ents, pb.Entry{
+	s.ents = append(s.ents, &pb.Entry{
 		Term:  new(uint64(1)),
 		Index: new(uint64(11)),
 		Type:  pb.EntryType_EntryNormal.Enum(),
@@ -823,7 +823,7 @@ func TestRawNodeCommitPaginationAfterRestart(t *testing.T) {
 func TestRawNodeBoundedLogGrowthWithPartition(t *testing.T) {
 	const maxEntries = 16
 	data := []byte("testdata")
-	testEntry := pb.Entry{Data: data}
+	testEntry := &pb.Entry{Data: data}
 	maxEntrySize := maxEntries * payloadSize(testEntry)
 	t.Log("maxEntrySize", maxEntrySize)
 

@@ -46,6 +46,7 @@ func EnsureSnapshot(s *Snapshot) *Snapshot {
 	return s
 }
 
+
 // EntrySliceToPointers converts a slice of Entry values to a slice of Entry pointers.
 // TODO: remove this function
 func EntrySliceToPointers(ents []Entry) []*Entry {

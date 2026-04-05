@@ -632,7 +632,7 @@ func (r *raft) maybeSendAppend(to uint64, sendIfEmpty bool) bool {
 		return r.maybeSendSnapshot(to, pr)
 	}
 
-	var ents []pb.Entry
+	var ents []*pb.Entry
 	// In a throttled StateReplicate only send empty MsgApp, to ensure progress.
 	// Otherwise, if we had a full Inflights and all inflight messages were in
 	// fact dropped, replication to that follower would stall. Instead, an empty
@@ -656,7 +656,7 @@ func (r *raft) maybeSendAppend(to uint64, sendIfEmpty bool) bool {
 		Type:    new(pb.MessageType_MsgApp),
 		Index:   new(prevIndex),
 		LogTerm: new(prevTerm),
-		Entries: pb.EntrySliceToPointers(ents),
+		Entries: ents,
 		Commit:  new(r.raftLog.committed),
 	})
 	pr.SentEntries(len(ents), uint64(payloadsSize(ents)))
@@ -812,11 +812,11 @@ func (r *raft) reset(term uint64) {
 	r.readOnly = newReadOnly(r.readOnly.option)
 }
 
-func (r *raft) appendEntry(es ...pb.Entry) (accepted bool) {
+func (r *raft) appendEntry(es ...*pb.Entry) (accepted bool) {
 	li := r.raftLog.lastIndex()
-	for i := range es {
-		es[i].Term = new(r.Term)
-		es[i].Index = new(li + 1 + uint64(i))
+	for i, e := range es {
+		e.Term = new(r.Term)
+		e.Index = new(li + 1 + uint64(i))
 	}
 	// Track the size of this uncommitted proposal.
 	if !r.increaseUncommittedSize(es) {
@@ -958,8 +958,7 @@ func (r *raft) becomeLeader() {
 	r.pendingConfIndex = r.raftLog.lastIndex()
 
 	traceBecomeLeader(r)
-	emptyEnt := pb.Entry{Data: nil}
-	if !r.appendEntry(emptyEnt) {
+	if !r.appendEntry(&pb.Entry{Data: nil}) {
 		// This won't happen because we just called reset() above.
 		r.logger.Panic("empty entry was dropped")
 	}
@@ -1006,9 +1005,9 @@ func (r *raft) hasUnappliedConfChanges() bool {
 	// TODO(pavelkalinnikov): find a way to budget memory/bandwidth for this scan
 	// outside the raft package.
 	pageSize := r.raftLog.maxApplyingEntsSize
-	if err := r.raftLog.scan(lo, hi, pageSize, func(ents []pb.Entry) error {
-		for i := range ents {
-			if ents[i].GetType() == pb.EntryType_EntryConfChange || ents[i].GetType() == pb.EntryType_EntryConfChangeV2 {
+	if err := r.raftLog.scan(lo, hi, pageSize, func(ents []*pb.Entry) error {
+		for _, e := range ents {
+			if e.GetType() == pb.EntryType_EntryConfChange || e.GetType() == pb.EntryType_EntryConfChangeV2 {
 				found = true
 				return errBreak
 			}
@@ -1197,8 +1196,8 @@ func (r *raft) Step(m pb.Message) error {
 	case pb.MessageType_MsgStorageApplyResp:
 		if len(m.GetEntries()) > 0 {
 			index := m.GetEntries()[len(m.GetEntries())-1].GetIndex()
-			r.appliedTo(index, entsPtrSize(m.GetEntries()))
-			r.reduceUncommittedSize(payloadsPtrSize(m.GetEntries()))
+			r.appliedTo(index, entsSize(m.GetEntries()))
+			r.reduceUncommittedSize(payloadsSize(m.GetEntries()))
 		}
 
 	case pb.MessageType_MsgVote, pb.MessageType_MsgPreVote:
@@ -1339,7 +1338,7 @@ func stepLeader(r *raft, m pb.Message) error {
 			}
 		}
 
-		if !r.appendEntry(pb.EntrySliceFromPointers(m.GetEntries())...) {
+		if !r.appendEntry(m.GetEntries()...) {
 			return ErrProposalDropped
 		}
 		r.bcastAppend()
@@ -1777,7 +1776,7 @@ func logSliceFromMsgApp(m *pb.Message) logSlice {
 	return logSlice{
 		term:    m.GetTerm(),
 		prev:    entryID{term: m.GetLogTerm(), index: m.GetIndex()},
-		entries: pb.EntrySliceFromPointers(m.GetEntries()),
+		entries: m.GetEntries(),
 	}
 }
 
@@ -2090,7 +2089,7 @@ func (r *raft) responseToReadIndexReq(req pb.Message, readIndex uint64) pb.Messa
 //
 // Empty payloads are never refused. This is used both for appending an empty
 // entry at a new leader's term, as well as leaving a joint configuration.
-func (r *raft) increaseUncommittedSize(ents []pb.Entry) bool {
+func (r *raft) increaseUncommittedSize(ents []*pb.Entry) bool {
 	s := payloadsSize(ents)
 	if r.uncommittedSize > 0 && s > 0 && r.uncommittedSize+s > r.maxUncommittedSize {
 		// If the uncommitted tail of the Raft log is empty, allow any size

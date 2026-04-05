@@ -285,7 +285,7 @@ func TestNodeProposeAddDuplicateNode(t *testing.T) {
 	ctx, cancel, n := newNodeTestHarness(t.Context(), t, cfg)
 	defer cancel()
 	n.Campaign(ctx)
-	allCommittedEntries := make([]raftpb.Entry, 0)
+	allCommittedEntries := make([]*raftpb.Entry, 0)
 	ticker := time.NewTicker(time.Millisecond * 100)
 	defer ticker.Stop()
 	goroutineStopped := make(chan struct{})
@@ -487,24 +487,24 @@ func TestNodeStart(t *testing.T) {
 	wants := []Ready{
 		{
 			HardState: raftpb.HardState{Term: new(uint64(1)), Commit: new(uint64(1)), Vote: new(uint64(0))},
-			Entries: []raftpb.Entry{
+			Entries: []*raftpb.Entry{
 				{Type: raftpb.EntryType_EntryConfChange.Enum(), Term: new(uint64(1)), Index: new(uint64(1)), Data: ccdata},
 			},
-			CommittedEntries: []raftpb.Entry{
+			CommittedEntries: []*raftpb.Entry{
 				{Type: raftpb.EntryType_EntryConfChange.Enum(), Term: new(uint64(1)), Index: new(uint64(1)), Data: ccdata},
 			},
 			MustSync: true,
 		},
 		{
 			HardState:        raftpb.HardState{Term: new(uint64(2)), Commit: new(uint64(2)), Vote: new(uint64(1))},
-			Entries:          []raftpb.Entry{{Term: new(uint64(2)), Index: new(uint64(3)), Data: []byte("foo")}},
-			CommittedEntries: []raftpb.Entry{{Term: new(uint64(2)), Index: new(uint64(2)), Data: nil}},
+			Entries:          []*raftpb.Entry{{Term: new(uint64(2)), Index: new(uint64(3)), Data: []byte("foo")}},
+			CommittedEntries: []*raftpb.Entry{{Term: new(uint64(2)), Index: new(uint64(2)), Data: nil}},
 			MustSync:         true,
 		},
 		{
 			HardState:        raftpb.HardState{Term: new(uint64(2)), Commit: new(uint64(3)), Vote: new(uint64(1))},
 			Entries:          nil,
-			CommittedEntries: []raftpb.Entry{{Term: new(uint64(2)), Index: new(uint64(3)), Data: []byte("foo")}},
+			CommittedEntries: []*raftpb.Entry{{Term: new(uint64(2)), Index: new(uint64(3)), Data: []byte("foo")}},
 			MustSync:         false,
 		},
 	}
@@ -564,7 +564,7 @@ func TestNodeStart(t *testing.T) {
 }
 
 func TestNodeRestart(t *testing.T) {
-	entries := []raftpb.Entry{
+	entries := []*raftpb.Entry{
 		{Term: new(uint64(1)), Index: new(uint64(1))},
 		{Term: new(uint64(1)), Index: new(uint64(2)), Data: []byte("foo")},
 	}
@@ -610,7 +610,7 @@ func TestNodeRestartFromSnapshot(t *testing.T) {
 			Term:      new(uint64(1)),
 		},
 	}
-	entries := []raftpb.Entry{
+	entries := []*raftpb.Entry{
 		{Term: new(uint64(1)), Index: new(uint64(3)), Data: []byte("foo")},
 	}
 	st := raftpb.HardState{Term: new(uint64(1)), Commit: new(uint64(3))}
@@ -776,7 +776,7 @@ func TestAppendPagination(t *testing.T) {
 	n.msgHook = func(m raftpb.Message) bool {
 		if m.GetType() == raftpb.MessageType_MsgApp {
 			size := 0
-			for _, e := range raftpb.EntrySliceFromPointers(m.GetEntries()) {
+			for _, e := range m.GetEntries() {
 				size += len(e.GetData())
 			}
 			assert.LessOrEqual(t, size, maxSizePerMsg, "sent MsgApp that is too large")
@@ -866,7 +866,7 @@ func TestCommitPaginationWithAsyncStorageWrites(t *testing.T) {
 	require.Len(t, rd.Messages, 1)
 	m := rd.Messages[0]
 	require.Equal(t, raftpb.MessageType_MsgStorageAppend, m.GetType())
-	require.NoError(t, s.Append(raftpb.EntrySliceFromPointers(m.GetEntries())))
+	require.NoError(t, s.Append(m.GetEntries()))
 	for _, resp := range m.Responses {
 		require.NoError(t, n.Step(ctx, *resp))
 	}
@@ -875,7 +875,7 @@ func TestCommitPaginationWithAsyncStorageWrites(t *testing.T) {
 	require.Len(t, rd.Messages, 1)
 	m = rd.Messages[0]
 	require.Equal(t, raftpb.MessageType_MsgStorageAppend, m.GetType())
-	require.NoError(t, s.Append(raftpb.EntrySliceFromPointers(m.GetEntries())))
+	require.NoError(t, s.Append(m.GetEntries()))
 	for _, resp := range m.Responses {
 		require.NoError(t, n.Step(ctx, *resp))
 	}
@@ -885,12 +885,12 @@ func TestCommitPaginationWithAsyncStorageWrites(t *testing.T) {
 	for _, m := range rd.Messages {
 		switch m.GetType() {
 		case raftpb.MessageType_MsgStorageAppend:
-			require.NoError(t, s.Append(raftpb.EntrySliceFromPointers(m.GetEntries())))
+			require.NoError(t, s.Append(m.GetEntries()))
 			for _, resp := range m.Responses {
 				require.NoError(t, n.Step(ctx, *resp))
 			}
 		case raftpb.MessageType_MsgStorageApply:
-			require.Len(t, raftpb.EntrySliceFromPointers(m.GetEntries()), 1)
+			require.Len(t, m.GetEntries(), 1)
 			require.Len(t, m.Responses, 1)
 			require.NoError(t, n.Step(ctx, *m.Responses[0]))
 		default:
@@ -907,8 +907,8 @@ func TestCommitPaginationWithAsyncStorageWrites(t *testing.T) {
 	require.Len(t, rd.Messages, 1)
 	m = rd.Messages[0]
 	require.Equal(t, raftpb.MessageType_MsgStorageAppend, m.GetType())
-	require.Len(t, raftpb.EntrySliceFromPointers(m.GetEntries()), 1)
-	require.NoError(t, s.Append(raftpb.EntrySliceFromPointers(m.GetEntries())))
+	require.Len(t, m.GetEntries(), 1)
+	require.NoError(t, s.Append(m.GetEntries()))
 	for _, resp := range m.Responses {
 		require.NoError(t, n.Step(ctx, *resp))
 	}
@@ -923,12 +923,12 @@ func TestCommitPaginationWithAsyncStorageWrites(t *testing.T) {
 	for _, m := range rd.Messages {
 		switch m.GetType() {
 		case raftpb.MessageType_MsgStorageAppend:
-			require.NoError(t, s.Append(raftpb.EntrySliceFromPointers(m.GetEntries())))
+			require.NoError(t, s.Append(m.GetEntries()))
 			for _, resp := range m.Responses {
 				require.NoError(t, n.Step(ctx, *resp))
 			}
 		case raftpb.MessageType_MsgStorageApply:
-			require.Len(t, raftpb.EntrySliceFromPointers(m.GetEntries()), 1)
+			require.Len(t, m.GetEntries(), 1)
 			require.Len(t, m.Responses, 1)
 			applyResps = append(applyResps, *m.Responses[0])
 		default:
@@ -945,12 +945,12 @@ func TestCommitPaginationWithAsyncStorageWrites(t *testing.T) {
 	for _, m := range rd.Messages {
 		switch m.GetType() {
 		case raftpb.MessageType_MsgStorageAppend:
-			require.NoError(t, s.Append(raftpb.EntrySliceFromPointers(m.GetEntries())))
+			require.NoError(t, s.Append(m.GetEntries()))
 			for _, resp := range m.Responses {
 				require.NoError(t, n.Step(ctx, *resp))
 			}
 		case raftpb.MessageType_MsgStorageApply:
-			require.Len(t, raftpb.EntrySliceFromPointers(m.GetEntries()), 1)
+			require.Len(t, m.GetEntries(), 1)
 			require.Len(t, m.Responses, 1)
 			applyResps = append(applyResps, *m.Responses[0])
 		default:
@@ -981,7 +981,7 @@ func TestCommitPaginationWithAsyncStorageWrites(t *testing.T) {
 	require.Len(t, rd.Messages, 1)
 	m = rd.Messages[0]
 	require.Equal(t, raftpb.MessageType_MsgStorageApply, m.GetType())
-	require.Len(t, raftpb.EntrySliceFromPointers(m.GetEntries()), 1)
+	require.Len(t, m.GetEntries(), 1)
 	applyResps = append(applyResps, *m.Responses[0])
 
 	// Acknowledged second and third entry application.
@@ -995,7 +995,7 @@ type ignoreSizeHintMemStorage struct {
 	*MemoryStorage
 }
 
-func (s *ignoreSizeHintMemStorage) Entries(lo, hi uint64, _ uint64) ([]raftpb.Entry, error) {
+func (s *ignoreSizeHintMemStorage) Entries(lo, hi uint64, _ uint64) ([]*raftpb.Entry, error) {
 	return s.MemoryStorage.Entries(lo, hi, math.MaxUint64)
 }
 
@@ -1026,10 +1026,10 @@ func TestNodeCommitPaginationAfterRestart(t *testing.T) {
 	}
 
 	s.hardState = persistedHardState
-	s.ents = make([]raftpb.Entry, 10)
+	s.ents = make([]*raftpb.Entry, 10)
 	var size uint64
 	for i := range s.ents {
-		ent := raftpb.Entry{
+		ent := &raftpb.Entry{
 			Term:  new(uint64(1)),
 			Index: new(uint64(i + 1)),
 			Type:  raftpb.EntryType_EntryNormal.Enum(),
@@ -1037,14 +1037,14 @@ func TestNodeCommitPaginationAfterRestart(t *testing.T) {
 		}
 
 		s.ents[i] = ent
-		size += uint64(proto.Size(&ent))
+		size += uint64(proto.Size(ent))
 	}
 
 	cfg := newTestConfig(1, 10, 1, s)
 	// Set a MaxSizePerMsg that would suggest to Raft that the last committed entry should
 	// not be included in the initial rd.CommittedEntries. However, our storage will ignore
 	// this and *will* return it (which is how the Commit index ended up being 10 initially).
-	cfg.MaxSizePerMsg = size - uint64(proto.Size(&s.ents[len(s.ents)-1])) - 1
+	cfg.MaxSizePerMsg = size - uint64(proto.Size(s.ents[len(s.ents)-1])) - 1
 
 	rn, err := NewRawNode(cfg)
 	require.NoError(t, err)

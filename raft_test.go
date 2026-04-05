@@ -34,7 +34,7 @@ import (
 )
 
 // nextEnts returns the appliable entries and updates the applied index.
-func nextEnts(r *raft, s *MemoryStorage) (ents []pb.Entry) {
+func nextEnts(r *raft, s *MemoryStorage) (ents []*pb.Entry) {
 	// Append unstable entries.
 	s.Append(r.raftLog.nextUnstableEnts())
 	r.raftLog.stableTo(r.raftLog.lastEntryID())
@@ -48,7 +48,7 @@ func nextEnts(r *raft, s *MemoryStorage) (ents []pb.Entry) {
 	return ents
 }
 
-func mustAppendEntry(r *raft, ents ...pb.Entry) {
+func mustAppendEntry(r *raft, ents ...*pb.Entry) {
 	if !r.appendEntry(ents...) {
 		panic("entry unexpectedly dropped")
 	}
@@ -226,10 +226,10 @@ func TestUncommittedEntryLimit(t *testing.T) {
 	// expect them, or because the final tally ends up nonzero. (At the time of
 	// writing, the former).
 	const maxEntries = 1024
-	testEntry := pb.Entry{Data: []byte("testdata")}
+	testEntry := &pb.Entry{Data: []byte("testdata")}
 	maxEntrySize := maxEntries * payloadSize(testEntry)
 
-	require.Zero(t, payloadSize(pb.Entry{Data: nil}))
+	require.Zero(t, payloadSize(&pb.Entry{Data: nil}))
 
 	cfg := newTestConfig(1, 5, 1, newTestMemoryStorage(withPeers(1, 2, 3)))
 	cfg.MaxUncommittedEntriesSize = uint64(maxEntrySize)
@@ -246,8 +246,8 @@ func TestUncommittedEntryLimit(t *testing.T) {
 	r.uncommittedSize = 0
 
 	// Send proposals to r1. The first 5 entries should be appended to the log.
-	propMsg := pb.Message{From: new(uint64(1)), To: new(uint64(1)), Type: new(pb.MessageType_MsgProp), Entries: []*pb.Entry{&testEntry}}
-	propEnts := make([]pb.Entry, maxEntries)
+	propMsg := pb.Message{From: new(uint64(1)), To: new(uint64(1)), Type: new(pb.MessageType_MsgProp), Entries: []*pb.Entry{testEntry}}
+	propEnts := make([]*pb.Entry, maxEntries)
 	for i := 0; i < maxEntries; i++ {
 		require.NoError(t, r.Step(propMsg), "#%d", i)
 		propEnts[i] = testEntry
@@ -265,11 +265,11 @@ func TestUncommittedEntryLimit(t *testing.T) {
 
 	// Send a single large proposal to r1. Should be accepted even though it
 	// pushes us above the limit because we were beneath it before the proposal.
-	propEnts = make([]pb.Entry, 2*maxEntries)
+	propEnts = make([]*pb.Entry, 2*maxEntries)
 	for i := range propEnts {
 		propEnts[i] = testEntry
 	}
-	propMsgLarge := pb.Message{From: new(uint64(1)), To: new(uint64(1)), Type: new(pb.MessageType_MsgProp), Entries: pb.EntrySliceToPointers(propEnts)}
+	propMsgLarge := pb.Message{From: new(uint64(1)), To: new(uint64(1)), Type: new(pb.MessageType_MsgProp), Entries: propEnts}
 	require.NoError(t, r.Step(propMsgLarge))
 
 	// Send one more proposal to r1. It should be rejected, again.
@@ -601,7 +601,7 @@ func TestLogReplication(t *testing.T) {
 
 			assert.Equal(t, tt.wcommitted, sm.raftLog.committed, "#%d.%d", i, j)
 
-			var ents []pb.Entry
+			var ents []*pb.Entry
 			for _, e := range nextEnts(sm, tt.network.storage[j]) {
 				if e.GetData() != nil {
 					ents = append(ents, e)
@@ -857,7 +857,7 @@ func TestCandidateConcede(t *testing.T) {
 	assert.Equal(t, uint64(1), a.Term)
 
 	wantLog := ltoa(newLog(&MemoryStorage{
-		ents: []pb.Entry{{}, {Data: nil, Term: new(uint64(1)), Index: new(uint64(1))}, {Term: new(uint64(1)), Index: new(uint64(2)), Data: data}},
+		ents: []*pb.Entry{{}, {Data: nil, Term: new(uint64(1)), Index: new(uint64(1))}, {Term: new(uint64(1)), Index: new(uint64(2)), Data: data}},
 	}, nil))
 	for i, p := range tt.peers {
 		if sm, ok := p.(*raft); ok {
@@ -892,7 +892,7 @@ func TestOldMessages(t *testing.T) {
 	tt.send(pb.Message{From: new(uint64(2)), To: new(uint64(2)), Type: new(pb.MessageType_MsgHup)})
 	tt.send(pb.Message{From: new(uint64(1)), To: new(uint64(1)), Type: new(pb.MessageType_MsgHup)})
 	// pretend we're an old leader trying to make progress; this entry is expected to be ignored.
-	tt.send(pb.Message{From: new(uint64(2)), To: new(uint64(1)), Type: new(pb.MessageType_MsgApp), Term: new(uint64(2)), Entries: pb.EntrySliceToPointers(index(3).terms(2))})
+	tt.send(pb.Message{From: new(uint64(2)), To: new(uint64(1)), Type: new(pb.MessageType_MsgApp), Term: new(uint64(2)), Entries: index(3).terms(2)})
 	// commit a new entry
 	tt.send(pb.Message{From: new(uint64(1)), To: new(uint64(1)), Type: new(pb.MessageType_MsgProp), Entries: []*pb.Entry{{Data: []byte("somedata")}}})
 
@@ -948,7 +948,7 @@ func TestProposal(t *testing.T) {
 		wantLog := newLog(NewMemoryStorage(), raftLogger)
 		if tt.success {
 			wantLog = newLog(&MemoryStorage{
-				ents: []pb.Entry{{}, {Data: nil, Term: new(uint64(1)), Index: new(uint64(1))}, {Term: new(uint64(1)), Index: new(uint64(2)), Data: data}},
+				ents: []*pb.Entry{{}, {Data: nil, Term: new(uint64(1)), Index: new(uint64(1))}, {Term: new(uint64(1)), Index: new(uint64(2)), Data: data}},
 			}, nil)
 		}
 		base := ltoa(wantLog)
@@ -979,7 +979,7 @@ func TestProposalByProxy(t *testing.T) {
 		tt.send(pb.Message{From: new(uint64(2)), To: new(uint64(2)), Type: new(pb.MessageType_MsgProp), Entries: []*pb.Entry{{Data: []byte("somedata")}}})
 
 		wantLog := newLog(&MemoryStorage{
-			ents: []pb.Entry{{}, {Data: nil, Term: new(uint64(1)), Index: new(uint64(1))}, {Term: new(uint64(1)), Data: data, Index: new(uint64(2))}},
+			ents: []*pb.Entry{{}, {Data: nil, Term: new(uint64(1)), Index: new(uint64(1))}, {Term: new(uint64(1)), Data: data, Index: new(uint64(2))}},
 		}, nil)
 		base := ltoa(wantLog)
 		for i, p := range tt.peers {
@@ -998,7 +998,7 @@ func TestProposalByProxy(t *testing.T) {
 func TestCommit(t *testing.T) {
 	tests := []struct {
 		matches []uint64
-		logs    []pb.Entry
+		logs    []*pb.Entry
 		smTerm  uint64
 		w       uint64
 	}{
@@ -2260,7 +2260,7 @@ func TestBcastBeat(t *testing.T) {
 	sm.becomeCandidate()
 	sm.becomeLeader()
 	for i := 0; i < 10; i++ {
-		mustAppendEntry(sm, pb.Entry{Index: new(uint64(i) + 1)})
+		mustAppendEntry(sm, &pb.Entry{Index: new(uint64(i) + 1)})
 	}
 	sm.advanceMessagesAfterAppend()
 
@@ -2369,7 +2369,7 @@ func TestSendAppendForProgressProbe(t *testing.T) {
 			// we expect that raft will only send out one msgAPP on the first
 			// loop. After that, the follower is paused until a heartbeat response is
 			// received.
-			mustAppendEntry(r, pb.Entry{Data: []byte("somedata")})
+			mustAppendEntry(r, &pb.Entry{Data: []byte("somedata")})
 			r.sendAppend(2)
 			msg := r.readMessages()
 			assert.Len(t, msg, 1)
@@ -2378,7 +2378,7 @@ func TestSendAppendForProgressProbe(t *testing.T) {
 
 		assert.True(t, r.trk.Progress[2].MsgAppFlowPaused)
 		for j := 0; j < 10; j++ {
-			mustAppendEntry(r, pb.Entry{Data: []byte("somedata")})
+			mustAppendEntry(r, &pb.Entry{Data: []byte("somedata")})
 			r.sendAppend(2)
 			assert.Empty(t, r.readMessages())
 		}
@@ -2411,7 +2411,7 @@ func TestSendAppendForProgressReplicate(t *testing.T) {
 	r.trk.Progress[2].BecomeReplicate()
 
 	for i := 0; i < 10; i++ {
-		mustAppendEntry(r, pb.Entry{Data: []byte("somedata")})
+		mustAppendEntry(r, &pb.Entry{Data: []byte("somedata")})
 		r.sendAppend(2)
 		msgs := r.readMessages()
 		assert.Len(t, msgs, 1, "#%d", i)
@@ -2426,7 +2426,7 @@ func TestSendAppendForProgressSnapshot(t *testing.T) {
 	r.trk.Progress[2].BecomeSnapshot(10)
 
 	for i := 0; i < 10; i++ {
-		mustAppendEntry(r, pb.Entry{Data: []byte("somedata")})
+		mustAppendEntry(r, &pb.Entry{Data: []byte("somedata")})
 		r.sendAppend(2)
 		msgs := r.readMessages()
 		assert.Empty(t, msgs, "#%d", i)
@@ -2768,7 +2768,7 @@ func TestStepIgnoreConfig(t *testing.T) {
 	index := r.raftLog.lastIndex()
 	pendingConfIndex := r.pendingConfIndex
 	r.Step(pb.Message{From: new(uint64(1)), To: new(uint64(1)), Type: new(pb.MessageType_MsgProp), Entries: []*pb.Entry{{Type: pb.EntryType_EntryConfChange.Enum()}}})
-	wents := []pb.Entry{{Type: pb.EntryType_EntryNormal.Enum(), Term: new(uint64(1)), Index: new(uint64(3)), Data: nil}}
+	wents := []*pb.Entry{{Type: pb.EntryType_EntryNormal.Enum(), Term: new(uint64(1)), Index: new(uint64(3)), Data: nil}}
 	ents, err := r.raftLog.entries(index+1, noLimit)
 	require.NoError(t, err)
 	assert.Equal(t, wents, ents)
@@ -2788,7 +2788,7 @@ func TestNewLeaderPendingConfig(t *testing.T) {
 	for i, tt := range tests {
 		r := newTestRaft(1, 10, 1, newTestMemoryStorage(withPeers(1, 2)))
 		if tt.addEntry {
-			mustAppendEntry(r, pb.Entry{Type: pb.EntryType_EntryNormal.Enum()})
+			mustAppendEntry(r, &pb.Entry{Type: pb.EntryType_EntryNormal.Enum()})
 		}
 		r.becomeCandidate()
 		r.becomeLeader()
@@ -3740,8 +3740,8 @@ func TestConfChangeV2CheckBeforeCampaign(t *testing.T) {
 
 func TestFastLogRejection(t *testing.T) {
 	tests := []struct {
-		leaderLog       []pb.Entry // Logs on the leader
-		followerLog     []pb.Entry // Logs on the follower
+		leaderLog       []*pb.Entry // Logs on the leader
+		followerLog     []*pb.Entry // Logs on the follower
 		followerCompact uint64     // Index at which the follower log is compacted.
 		rejectHintTerm  uint64     // Expected term included in rejected MsgAppResp.
 		rejectHintIndex uint64     // Expected index included in rejected MsgAppResp.
@@ -3910,7 +3910,7 @@ func TestFastLogRejection(t *testing.T) {
 func entsWithConfig(configFunc func(*Config), terms ...uint64) *raft {
 	storage := NewMemoryStorage()
 	for i, term := range terms {
-		storage.Append([]pb.Entry{{Index: new(uint64(i + 1)), Term: new(term)}})
+		storage.Append([]*pb.Entry{{Index: new(uint64(i + 1)), Term: new(term)}})
 	}
 	cfg := newTestConfig(1, 5, 1, storage)
 	if configFunc != nil {
@@ -3946,10 +3946,10 @@ func TestLogReplicationWithReorderedMessage(t *testing.T) {
 	r2 := newTestRaft(2, 10, 1, newTestMemoryStorage(withPeers(1, 2)))
 
 	// r1 sends 2 MsgApp messages to r2.
-	mustAppendEntry(r1, pb.Entry{Data: []byte("somedata")})
+	mustAppendEntry(r1, &pb.Entry{Data: []byte("somedata")})
 	r1.sendAppend(2)
 	req1 := expectOneMessage(t, r1)
-	mustAppendEntry(r1, pb.Entry{Data: []byte("somedata")})
+	mustAppendEntry(r1, &pb.Entry{Data: []byte("somedata")})
 	r1.sendAppend(2)
 	req2 := expectOneMessage(t, r1)
 
