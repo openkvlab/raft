@@ -22,6 +22,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/openkvlab/raft/quorum"
 	pb "github.com/openkvlab/raft/raftpb"
@@ -243,11 +244,11 @@ func TestRawNodeProposeAndConfChange(t *testing.T) {
 					var cc pb.ConfChangeI
 					if ent.GetType() == pb.EntryType_EntryConfChange {
 						var ccc pb.ConfChange
-						require.NoError(t, ccc.Unmarshal(ent.GetData()))
+						require.NoError(t, proto.Unmarshal(ent.GetData(), &ccc))
 						cc = ccc
 					} else if ent.GetType() == pb.EntryType_EntryConfChangeV2 {
 						var ccc pb.ConfChangeV2
-						require.NoError(t, ccc.Unmarshal(ent.GetData()))
+						require.NoError(t, proto.Unmarshal(ent.GetData(), &ccc))
 						cc = ccc
 					}
 					if cc != nil {
@@ -259,12 +260,12 @@ func TestRawNodeProposeAndConfChange(t *testing.T) {
 				if !proposed && rd.SoftState.Lead == rawNode.raft.id {
 					require.NoError(t, rawNode.Propose([]byte("somedata")))
 					if ccv1, ok := tc.cc.AsV1(); ok {
-						ccdata, err = ccv1.Marshal()
+						ccdata, err = proto.Marshal(&ccv1)
 						require.NoError(t, err)
 						rawNode.ProposeConfChange(ccv1)
 					} else {
 						ccv2 := tc.cc.AsV2()
-						ccdata, err = ccv2.Marshal()
+						ccdata, err = proto.Marshal(&ccv2)
 						require.NoError(t, err)
 						rawNode.ProposeConfChange(ccv2)
 					}
@@ -327,7 +328,7 @@ func TestRawNodeProposeAndConfChange(t *testing.T) {
 			require.Len(t, rd.Entries, 1)
 			require.Equal(t, pb.EntryType_EntryConfChangeV2, rd.Entries[0].GetType())
 			var cc pb.ConfChangeV2
-			require.NoError(t, cc.Unmarshal(rd.Entries[0].GetData()))
+			require.NoError(t, proto.Unmarshal(rd.Entries[0].GetData(), &cc))
 			require.Equal(t, pb.ConfChangeV2{Context: context}, cc)
 
 			// Lie and pretend the ConfChange applied. It won't do so because now
@@ -374,7 +375,7 @@ func TestRawNodeJointAutoLeave(t *testing.T) {
 			var cc pb.ConfChangeI
 			if ent.GetType() == pb.EntryType_EntryConfChangeV2 {
 				var ccc pb.ConfChangeV2
-				require.NoError(t, ccc.Unmarshal(ent.GetData()))
+				require.NoError(t, proto.Unmarshal(ent.GetData(), &ccc))
 				cc = &ccc
 			}
 			if cc != nil {
@@ -387,7 +388,7 @@ func TestRawNodeJointAutoLeave(t *testing.T) {
 		// Once we are the leader, propose a command and a ConfChange.
 		if !proposed && rd.SoftState.Lead == rawNode.raft.id {
 			require.NoError(t, rawNode.Propose([]byte("somedata")))
-			ccdata, err = testCc.Marshal()
+			ccdata, err = proto.Marshal(&testCc)
 			require.NoError(t, err)
 			rawNode.ProposeConfChange(testCc)
 			proposed = true
@@ -438,7 +439,7 @@ func TestRawNodeJointAutoLeave(t *testing.T) {
 	require.Len(t, rd.Entries, 1)
 	require.Equal(t, pb.EntryType_EntryConfChangeV2, rd.Entries[0].GetType())
 	var cc pb.ConfChangeV2
-	require.NoError(t, cc.Unmarshal(rd.Entries[0].GetData()))
+	require.NoError(t, proto.Unmarshal(rd.Entries[0].GetData(), &cc))
 	require.Equal(t, pb.ConfChangeV2{Context: nil}, cc)
 	// Lie and pretend the ConfChange applied. It won't do so because now
 	// we require the joint quorum and we're only running one node.
@@ -475,7 +476,7 @@ func TestRawNodeProposeAddDuplicateNode(t *testing.T) {
 		for _, entry := range rd.CommittedEntries {
 			if entry.GetType() == pb.EntryType_EntryConfChange {
 				var cc pb.ConfChange
-				cc.Unmarshal(entry.GetData())
+				proto.Unmarshal(entry.GetData(), &cc) //nolint:errcheck
 				rawNode.ApplyConfChange(cc)
 			}
 		}
@@ -483,7 +484,7 @@ func TestRawNodeProposeAddDuplicateNode(t *testing.T) {
 	}
 
 	cc1 := pb.ConfChange{Type: pb.ConfChangeType_ConfChangeAddNode.Enum(), NodeId: new(uint64(1))}
-	ccdata1, err := cc1.Marshal()
+	ccdata1, err := proto.Marshal(&cc1)
 	require.NoError(t, err)
 	proposeConfChangeAndApply(cc1)
 
@@ -492,7 +493,7 @@ func TestRawNodeProposeAddDuplicateNode(t *testing.T) {
 
 	// the new node join should be ok
 	cc2 := pb.ConfChange{Type: pb.ConfChangeType_ConfChangeAddNode.Enum(), NodeId: new(uint64(2))}
-	ccdata2, err := cc2.Marshal()
+	ccdata2, err := proto.Marshal(&cc2)
 	require.NoError(t, err)
 	proposeConfChangeAndApply(cc2)
 
@@ -776,14 +777,14 @@ func TestRawNodeCommitPaginationAfterRestart(t *testing.T) {
 		}
 
 		s.ents[i] = ent
-		size += uint64(ent.Size())
+		size += uint64(proto.Size(&ent))
 	}
 
 	cfg := newTestConfig(1, 10, 1, s)
 	// Set a MaxSizePerMsg that would suggest to Raft that the last committed entry should
 	// not be included in the initial rd.CommittedEntries. However, our storage will ignore
 	// this and *will* return it (which is how the Commit index ended up being 10 initially).
-	cfg.MaxSizePerMsg = size - uint64(s.ents[len(s.ents)-1].Size()) - 1
+	cfg.MaxSizePerMsg = size - uint64(proto.Size(&s.ents[len(s.ents)-1])) - 1
 
 	s.ents = append(s.ents, pb.Entry{
 		Term:  new(uint64(1)),

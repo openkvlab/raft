@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/proto"
 
 	pb "github.com/openkvlab/raft/raftpb"
 )
@@ -895,7 +896,7 @@ func TestSlice(t *testing.T) {
 		ents, _ := l.slice(lo, hi, noLimit)
 		size := uint64(0)
 		for i := 0; i < n; i++ {
-			size += uint64(ents[i].Size())
+			size += uint64(proto.Size(&ents[i]))
 		}
 		return size
 	}

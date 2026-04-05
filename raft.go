@@ -28,6 +28,8 @@ import (
 	"strings"
 	"sync"
 
+	"google.golang.org/protobuf/proto"
+
 	"github.com/openkvlab/raft/confchange"
 	"github.com/openkvlab/raft/quorum"
 	pb "github.com/openkvlab/raft/raftpb"
@@ -1301,13 +1303,13 @@ func stepLeader(r *raft, m pb.Message) error {
 			var cc pb.ConfChangeI
 			if e.GetType() == pb.EntryType_EntryConfChange {
 				var ccc pb.ConfChange
-				if err := ccc.Unmarshal(e.GetData()); err != nil {
+				if err := proto.Unmarshal(e.GetData(), &ccc); err != nil {
 					panic(err)
 				}
 				cc = ccc
 			} else if e.GetType() == pb.EntryType_EntryConfChangeV2 {
 				var ccc pb.ConfChangeV2
-				if err := ccc.Unmarshal(e.GetData()); err != nil {
+				if err := proto.Unmarshal(e.GetData(), &ccc); err != nil {
 					panic(err)
 				}
 				cc = ccc

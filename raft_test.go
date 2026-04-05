@@ -27,6 +27,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/proto"
 
 	pb "github.com/openkvlab/raft/raftpb"
 	"github.com/openkvlab/raft/tracker"
@@ -2968,7 +2969,7 @@ func TestCommitAfterRemoveNode(t *testing.T) {
 		Type:   pb.ConfChangeType_ConfChangeRemoveNode.Enum(),
 		NodeId: new(uint64(2)),
 	}
-	ccData, err := cc.Marshal()
+	ccData, err := proto.Marshal(&cc)
 	require.NoError(t, err)
 	r.Step(pb.Message{
 		Type: new(pb.MessageType_MsgProp),
@@ -3677,10 +3678,10 @@ func testConfChangeCheckBeforeCampaign(t *testing.T, v2 bool) {
 	var ty pb.EntryType
 	if v2 {
 		ccv2 := cc.AsV2()
-		ccData, err = ccv2.Marshal()
+		ccData, err = proto.Marshal(&ccv2)
 		ty = pb.EntryType_EntryConfChangeV2
 	} else {
-		ccData, err = cc.Marshal()
+		ccData, err = proto.Marshal(&cc)
 		ty = pb.EntryType_EntryConfChange
 	}
 	require.NoError(t, err)

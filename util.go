@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"strings"
 
+	"google.golang.org/protobuf/proto"
+
 	pb "github.com/openkvlab/raft/raftpb"
 )
 
@@ -223,14 +225,14 @@ func DescribeEntry(e pb.Entry, f EntryFormatter) string {
 		formatted = f(e.GetData())
 	case pb.EntryType_EntryConfChange:
 		var cc pb.ConfChange
-		if err := cc.Unmarshal(e.GetData()); err != nil {
+		if err := proto.Unmarshal(e.GetData(), &cc); err != nil {
 			formatted = err.Error()
 		} else {
 			formatted = formatConfChange(cc)
 		}
 	case pb.EntryType_EntryConfChangeV2:
 		var cc pb.ConfChangeV2
-		if err := cc.Unmarshal(e.GetData()); err != nil {
+		if err := proto.Unmarshal(e.GetData(), &cc); err != nil {
 			formatted = err.Error()
 		} else {
 			formatted = formatConfChange(cc)
@@ -258,8 +260,8 @@ type entryEncodingSize uint64
 
 func entsSize(ents []pb.Entry) entryEncodingSize {
 	var size entryEncodingSize
-	for _, ent := range ents {
-		size += entryEncodingSize(ent.Size())
+	for i := range ents {
+		size += entryEncodingSize(proto.Size(&ents[i]))
 	}
 	return size
 }
@@ -269,7 +271,7 @@ func entsPtrSize(ents []*pb.Entry) entryEncodingSize {
 	var size entryEncodingSize
 	for _, ent := range ents {
 		if ent != nil {
-			size += entryEncodingSize(ent.Size())
+			size += entryEncodingSize(proto.Size(ent))
 		}
 	}
 	return size
@@ -283,9 +285,9 @@ func limitSize(ents []pb.Entry, maxSize entryEncodingSize) []pb.Entry {
 	if len(ents) == 0 {
 		return ents
 	}
-	size := ents[0].Size()
+	size := proto.Size(&ents[0])
 	for limit := 1; limit < len(ents); limit++ {
-		size += ents[limit].Size()
+		size += proto.Size(&ents[limit])
 		if entryEncodingSize(size) > maxSize {
 			return ents[:limit]
 		}
