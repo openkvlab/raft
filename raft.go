@@ -1919,7 +1919,7 @@ func (r *raft) restore(s *pb.Snapshot) bool {
 	cfg, trk, err := confchange.Restore(confchange.Changer{
 		Tracker:   r.trk,
 		LastIndex: r.raftLog.lastIndex(),
-	}, *cs)
+	}, cs)
 
 	if err != nil {
 		// This should never happen. Either there's a bug in our config change
@@ -1927,7 +1927,7 @@ func (r *raft) restore(s *pb.Snapshot) bool {
 		panic(fmt.Sprintf("unable to restore config %+v: %s", cs, err))
 	}
 
-	assertConfStatesEquivalent(r.logger, *cs, r.switchToConfig(cfg, trk))
+	assertConfStatesEquivalent(r.logger, cs, r.switchToConfig(cfg, trk))
 
 	last := r.raftLog.lastEntryID()
 	r.logger.Infof("%x [commit: %d, lastindex: %d, lastterm: %d] restored snapshot [index: %d, term: %d]",
@@ -1942,7 +1942,7 @@ func (r *raft) promotable() bool {
 	return pr != nil && !pr.IsLearner && !r.raftLog.hasNextOrInProgressSnapshot()
 }
 
-func (r *raft) applyConfChange(cc pb.ConfChangeV2) pb.ConfState {
+func (r *raft) applyConfChange(cc pb.ConfChangeV2) *pb.ConfState {
 	cfg, trk, err := func() (tracker.Config, tracker.ProgressMap, error) {
 		changer := confchange.Changer{
 			Tracker:   r.trk,
@@ -1970,7 +1970,7 @@ func (r *raft) applyConfChange(cc pb.ConfChangeV2) pb.ConfState {
 // requirements.
 //
 // The inputs usually result from restoring a ConfState or applying a ConfChange.
-func (r *raft) switchToConfig(cfg tracker.Config, trk tracker.ProgressMap) pb.ConfState {
+func (r *raft) switchToConfig(cfg tracker.Config, trk tracker.ProgressMap) *pb.ConfState {
 	traceConfChangeEvent(cfg, r)
 
 	r.trk.Config = cfg

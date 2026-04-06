@@ -91,7 +91,7 @@ func TestRestore(t *testing.T) {
 			Tracker:   tracker.MakeProgressTracker(20, 0),
 			LastIndex: 10,
 		}
-		cfg, trk, err := Restore(chg, cs)
+		cfg, trk, err := Restore(chg, &cs)
 		if !assert.NoError(t, err) {
 			return false
 		}
@@ -110,7 +110,7 @@ func TestRestore(t *testing.T) {
 		cs2 := chg.Tracker.ConfState()
 		// NB: cs.Equivalent does the same "sorting" dance internally, but let's
 		// test it a bit here instead of relying on it.
-		if assert.Equal(t, cs, cs2) && assert.NoError(t, cs.Equivalent(cs2)) && assert.NoError(t, cs2.Equivalent(cs)) {
+		if assert.Equal(t, cs, *cs2) && assert.NoError(t, cs.Equivalent(*cs2)) && assert.NoError(t, cs2.Equivalent(cs)) {
 			return true // success
 		}
 		return false

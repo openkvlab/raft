@@ -296,7 +296,7 @@ type node struct {
 	propc      chan msgWithResult
 	recvc      chan *pb.Message
 	confc      chan pb.ConfChangeV2
-	confstatec chan pb.ConfState
+	confstatec chan *pb.ConfState
 	readyc     chan Ready
 	advancec   chan struct{}
 	tickc      chan struct{}
@@ -312,7 +312,7 @@ func newNode(rn *RawNode) node {
 		propc:      make(chan msgWithResult),
 		recvc:      make(chan *pb.Message),
 		confc:      make(chan pb.ConfChangeV2),
-		confstatec: make(chan pb.ConfState),
+		confstatec: make(chan *pb.ConfState),
 		readyc:     make(chan Ready),
 		advancec:   make(chan struct{}),
 		// make tickc a buffered chan, so raft node can buffer some ticks when the node
@@ -554,7 +554,7 @@ func (n *node) Advance() {
 }
 
 func (n *node) ApplyConfChange(cc pb.ConfChangeI) *pb.ConfState {
-	var cs pb.ConfState
+	var cs *pb.ConfState
 	select {
 	case n.confc <- cc.AsV2():
 	case <-n.done:
@@ -563,7 +563,7 @@ func (n *node) ApplyConfChange(cc pb.ConfChangeI) *pb.ConfState {
 	case cs = <-n.confstatec:
 	case <-n.done:
 	}
-	return &cs
+	return cs
 }
 
 func (n *node) Status() Status {
