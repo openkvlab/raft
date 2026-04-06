@@ -40,7 +40,7 @@ func (env *InteractionEnv) SendSnapshot(fromIdx, toIdx int) error {
 	bs := env.Nodes[fromIdx].BasicStatus()
 	msg := &raftpb.Message{
 		Type:     new(raftpb.MessageType_MsgSnap),
-		Term:     new(bs.GetTerm()),
+		Term:     new(bs.HardState.GetTerm()),
 		From:     new(from),
 		To:       new(to),
 		Snapshot: snap,

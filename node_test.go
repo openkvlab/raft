@@ -486,7 +486,7 @@ func TestNodeStart(t *testing.T) {
 	require.NoError(t, err)
 	wants := []Ready{
 		{
-			HardState: raftpb.HardState{Term: new(uint64(1)), Commit: new(uint64(1)), Vote: new(uint64(0))},
+			HardState: &raftpb.HardState{Term: new(uint64(1)), Commit: new(uint64(1)), Vote: new(uint64(0))},
 			Entries: []*raftpb.Entry{
 				{Type: raftpb.EntryType_EntryConfChange.Enum(), Term: new(uint64(1)), Index: new(uint64(1)), Data: ccdata},
 			},
@@ -496,13 +496,13 @@ func TestNodeStart(t *testing.T) {
 			MustSync: true,
 		},
 		{
-			HardState:        raftpb.HardState{Term: new(uint64(2)), Commit: new(uint64(2)), Vote: new(uint64(1))},
+			HardState:        &raftpb.HardState{Term: new(uint64(2)), Commit: new(uint64(2)), Vote: new(uint64(1))},
 			Entries:          []*raftpb.Entry{{Term: new(uint64(2)), Index: new(uint64(3)), Data: []byte("foo")}},
 			CommittedEntries: []*raftpb.Entry{{Term: new(uint64(2)), Index: new(uint64(2)), Data: nil}},
 			MustSync:         true,
 		},
 		{
-			HardState:        raftpb.HardState{Term: new(uint64(2)), Commit: new(uint64(3)), Vote: new(uint64(1))},
+			HardState:        &raftpb.HardState{Term: new(uint64(2)), Commit: new(uint64(3)), Vote: new(uint64(1))},
 			Entries:          nil,
 			CommittedEntries: []*raftpb.Entry{{Term: new(uint64(2)), Index: new(uint64(3)), Data: []byte("foo")}},
 			MustSync:         false,
@@ -523,7 +523,7 @@ func TestNodeStart(t *testing.T) {
 
 	{
 		rd := <-n.Ready()
-		require.Equal(t, wants[0], rd)
+		requireReadyEqual(t, wants[0], rd)
 		storage.Append(rd.Entries)
 		n.Advance()
 	}
@@ -544,14 +544,14 @@ func TestNodeStart(t *testing.T) {
 	n.Propose(ctx, []byte("foo"))
 	{
 		rd := <-n.Ready()
-		assert.Equal(t, wants[1], rd)
+		requireReadyEqual(t, wants[1], rd)
 		storage.Append(rd.Entries)
 		n.Advance()
 	}
 
 	{
 		rd := <-n.Ready()
-		assert.Equal(t, wants[2], rd)
+		requireReadyEqual(t, wants[2], rd)
 		storage.Append(rd.Entries)
 		n.Advance()
 	}
@@ -568,11 +568,11 @@ func TestNodeRestart(t *testing.T) {
 		{Term: new(uint64(1)), Index: new(uint64(1))},
 		{Term: new(uint64(1)), Index: new(uint64(2)), Data: []byte("foo")},
 	}
-	st := raftpb.HardState{Term: new(uint64(1)), Commit: new(uint64(1))}
+	st := &raftpb.HardState{Term: new(uint64(1)), Commit: new(uint64(1))}
 
 	want := Ready{
 		// No HardState is emitted because there was no change.
-		HardState: raftpb.HardState{},
+		HardState: nil,
 		// commit up to index commit index in st
 		CommittedEntries: entries[:st.GetCommit()],
 		// MustSync is false because no HardState or new entries are provided.
@@ -592,7 +592,7 @@ func TestNodeRestart(t *testing.T) {
 	}
 	n := RestartNode(c)
 	defer n.Stop()
-	assert.Equal(t, want, <-n.Ready())
+	requireReadyEqual(t, want, <-n.Ready())
 	n.Advance()
 
 	select {
@@ -613,12 +613,12 @@ func TestNodeRestartFromSnapshot(t *testing.T) {
 	entries := []*raftpb.Entry{
 		{Term: new(uint64(1)), Index: new(uint64(3)), Data: []byte("foo")},
 	}
-	st := raftpb.HardState{Term: new(uint64(1)), Commit: new(uint64(3))}
+	st := &raftpb.HardState{Term: new(uint64(1)), Commit: new(uint64(3))}
 
 	want := Ready{
 		// No HardState is emitted because nothing changed relative to what is
 		// already persisted.
-		HardState: raftpb.HardState{},
+		HardState: nil,
 		// commit up to index commit index in st
 		CommittedEntries: entries,
 		// MustSync is only true when there is a new HardState or new entries;
@@ -640,9 +640,9 @@ func TestNodeRestartFromSnapshot(t *testing.T) {
 	}
 	n := RestartNode(c)
 	defer n.Stop()
-	if assert.Equal(t, want, <-n.Ready()) {
-		n.Advance()
-	}
+	rd := <-n.Ready()
+	requireReadyEqual(t, want, rd)
+	n.Advance()
 
 	select {
 	case rd := <-n.Ready():
@@ -701,17 +701,17 @@ func TestSoftStateEqual(t *testing.T) {
 
 func TestIsHardStateEqual(t *testing.T) {
 	tests := []struct {
-		ht raftpb.HardState
+		ht *raftpb.HardState
 		we bool
 	}{
-		{emptyState, true},
-		{raftpb.HardState{Vote: new(uint64(1))}, false},
-		{raftpb.HardState{Commit: new(uint64(1))}, false},
-		{raftpb.HardState{Term: new(uint64(1))}, false},
+		{nil, true},
+		{&raftpb.HardState{Vote: new(uint64(1))}, false},
+		{&raftpb.HardState{Commit: new(uint64(1))}, false},
+		{&raftpb.HardState{Term: new(uint64(1))}, false},
 	}
 
 	for i, tt := range tests {
-		assert.Equal(t, tt.we, isHardStateEqual(tt.ht, emptyState), "#%d", i)
+		assert.Equal(t, tt.we, isHardStateEqual(tt.ht, nil), "#%d", i)
 	}
 }
 
@@ -1019,7 +1019,7 @@ func TestNodeCommitPaginationAfterRestart(t *testing.T) {
 	s := &ignoreSizeHintMemStorage{
 		MemoryStorage: newTestMemoryStorage(withPeers(1)),
 	}
-	persistedHardState := raftpb.HardState{
+	persistedHardState := &raftpb.HardState{
 		Term:   new(uint64(1)),
 		Vote:   new(uint64(1)),
 		Commit: new(uint64(10)),

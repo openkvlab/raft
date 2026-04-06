@@ -45,7 +45,7 @@ func (rn *RawNode) Bootstrap(peers []Peer) error {
 	// We've faked out initial entries above, but nothing has been
 	// persisted. Start with an empty HardState (thus the first Ready will
 	// emit a HardState update for the app to persist).
-	rn.prevHardSt = emptyState
+	rn.prevHardSt = nil
 
 	// TODO(tbg): remove StartNode and give the application the right tools to
 	// bootstrap the initial membership in a cleaner way.

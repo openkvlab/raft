@@ -143,6 +143,36 @@ func TestIsResponseMsg(t *testing.T) {
 	}
 }
 
+// requireReadyEqual compares two Ready structs using proto.Equal for protobuf
+// fields to avoid failures from internal protobuf lazy-initialization state.
+func requireReadyEqual(t *testing.T, expected, actual Ready, msgAndArgs ...interface{}) {
+	t.Helper()
+	if !proto.Equal(expected.HardState, actual.HardState) {
+		require.Fail(t, fmt.Sprintf("HardState not equal:\nexpected: %v\nactual:   %v", expected.HardState, actual.HardState), msgAndArgs...)
+	}
+	if len(expected.Entries) != len(actual.Entries) {
+		require.Fail(t, fmt.Sprintf("Entries length not equal: expected %d, got %d", len(expected.Entries), len(actual.Entries)), msgAndArgs...)
+	} else {
+		for i := range expected.Entries {
+			if !proto.Equal(expected.Entries[i], actual.Entries[i]) {
+				require.Fail(t, fmt.Sprintf("Entries[%d] not equal:\nexpected: %v\nactual:   %v", i, expected.Entries[i], actual.Entries[i]), msgAndArgs...)
+			}
+		}
+	}
+	if len(expected.CommittedEntries) != len(actual.CommittedEntries) {
+		require.Fail(t, fmt.Sprintf("CommittedEntries length not equal: expected %d, got %d", len(expected.CommittedEntries), len(actual.CommittedEntries)), msgAndArgs...)
+	} else {
+		for i := range expected.CommittedEntries {
+			if !proto.Equal(expected.CommittedEntries[i], actual.CommittedEntries[i]) {
+				require.Fail(t, fmt.Sprintf("CommittedEntries[%d] not equal:\nexpected: %v\nactual:   %v", i, expected.CommittedEntries[i], actual.CommittedEntries[i]), msgAndArgs...)
+			}
+		}
+	}
+	require.Equal(t, expected.SoftState, actual.SoftState, msgAndArgs...)
+	require.Equal(t, expected.ReadStates, actual.ReadStates, msgAndArgs...)
+	require.Equal(t, expected.MustSync, actual.MustSync, msgAndArgs...)
+}
+
 // TestPayloadSizeOfEmptyEntry ensures that payloadSize of empty entry is always zero.
 // This property is important because new leaders append an empty entry to their log,
 // and we don't want this to count towards the uncommitted log quota.

@@ -29,8 +29,6 @@ const (
 )
 
 var (
-	emptyState = pb.HardState{}
-
 	// ErrStopped is returned by methods on Nodes that have been stopped.
 	ErrStopped = errors.New("raft: stopped")
 )
@@ -58,12 +56,12 @@ type Ready struct {
 	// The current state of a Node to be saved to stable storage BEFORE
 	// Messages are sent.
 	//
-	// HardState will be equal to empty state if there is no update.
+	// HardState will be nil if there is no update.
 	//
 	// If async storage writes are enabled, this field does not need to be acted
 	// on immediately. It will be reflected in a MsgStorageAppend message in the
 	// Messages slice.
-	pb.HardState
+	HardState *pb.HardState
 
 	// ReadStates can be used for node to serve linearizable read requests locally
 	// when its applied index is greater than the index in ReadState.
@@ -114,13 +112,13 @@ type Ready struct {
 	MustSync bool
 }
 
-func isHardStateEqual(a, b pb.HardState) bool {
+func isHardStateEqual(a, b *pb.HardState) bool {
 	return a.GetTerm() == b.GetTerm() && a.GetVote() == b.GetVote() && a.GetCommit() == b.GetCommit()
 }
 
-// IsEmptyHardState returns true if the given HardState is empty.
-func IsEmptyHardState(st pb.HardState) bool {
-	return isHardStateEqual(st, emptyState)
+// IsEmptyHardState returns true if the given HardState is nil or empty.
+func IsEmptyHardState(st *pb.HardState) bool {
+	return st == nil || (st.GetTerm() == 0 && st.GetVote() == 0 && st.GetCommit() == 0)
 }
 
 // IsEmptySnap returns true if the given Snapshot is nil or empty.

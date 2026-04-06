@@ -80,7 +80,7 @@ func TestRawNodeStep(t *testing.T) {
 	for i, msgn := range pb.MessageType_name {
 		t.Run(msgn, func(t *testing.T) {
 			s := NewMemoryStorage()
-			s.SetHardState(pb.HardState{Term: new(uint64(1)), Commit: new(uint64(1))})
+			s.SetHardState(&pb.HardState{Term: new(uint64(1)), Commit: new(uint64(1))})
 			s.Append([]*pb.Entry{{Term: new(uint64(1)), Index: new(uint64(1))}})
 			require.NoError(t, s.ApplySnapshot(&pb.Snapshot{Metadata: &pb.SnapshotMetadata{
 				ConfState: &pb.ConfState{
@@ -574,7 +574,7 @@ func TestRawNodeStart(t *testing.T) {
 	}
 	want := Ready{
 		SoftState:        &SoftState{Lead: 1, RaftState: StateLeader},
-		HardState:        pb.HardState{Term: new(uint64(1)), Commit: new(uint64(3)), Vote: new(uint64(1))},
+		HardState:        &pb.HardState{Term: new(uint64(1)), Commit: new(uint64(3)), Vote: new(uint64(1))},
 		Entries:          nil, // emitted & checked in intermediate Ready cycle
 		CommittedEntries: entries,
 		MustSync:         false, // since we're only applying, not appending
@@ -663,10 +663,10 @@ func TestRawNodeRestart(t *testing.T) {
 		{Term: new(uint64(1)), Index: new(uint64(1))},
 		{Term: new(uint64(1)), Index: new(uint64(2)), Data: []byte("foo")},
 	}
-	st := pb.HardState{Term: new(uint64(1)), Commit: new(uint64(1))}
+	st := &pb.HardState{Term: new(uint64(1)), Commit: new(uint64(1))}
 
 	want := Ready{
-		HardState: emptyState,
+		HardState: nil,
 		// commit up to commit index in st
 		CommittedEntries: entries[:st.GetCommit()],
 		MustSync:         false,
@@ -678,7 +678,7 @@ func TestRawNodeRestart(t *testing.T) {
 	rawNode, err := NewRawNode(newTestConfig(1, 10, 1, storage))
 	require.NoError(t, err)
 	rd := rawNode.Ready()
-	assert.Equal(t, want, rd)
+	requireReadyEqual(t, want, rd)
 	rawNode.Advance(rd)
 	assert.False(t, rawNode.HasReady())
 }
@@ -694,10 +694,10 @@ func TestRawNodeRestartFromSnapshot(t *testing.T) {
 	entries := []*pb.Entry{
 		{Term: new(uint64(1)), Index: new(uint64(3)), Data: []byte("foo")},
 	}
-	st := pb.HardState{Term: new(uint64(1)), Commit: new(uint64(3))}
+	st := &pb.HardState{Term: new(uint64(1)), Commit: new(uint64(3))}
 
 	want := Ready{
-		HardState: emptyState,
+		HardState: nil,
 		// commit up to commit index in st
 		CommittedEntries: entries,
 		MustSync:         false,
@@ -710,9 +710,8 @@ func TestRawNodeRestartFromSnapshot(t *testing.T) {
 	rawNode, err := NewRawNode(newTestConfig(1, 10, 1, s))
 	require.NoError(t, err)
 	rd := rawNode.Ready()
-	if assert.Equal(t, want, rd) {
-		rawNode.Advance(rd)
-	}
+	requireReadyEqual(t, want, rd)
+	rawNode.Advance(rd)
 	assert.False(t, rawNode.HasReady())
 }
 
@@ -759,7 +758,7 @@ func TestRawNodeCommitPaginationAfterRestart(t *testing.T) {
 	s := &ignoreSizeHintMemStorage{
 		MemoryStorage: newTestMemoryStorage(withPeers(1)),
 	}
-	persistedHardState := pb.HardState{
+	persistedHardState := &pb.HardState{
 		Term:   new(uint64(1)),
 		Vote:   new(uint64(1)),
 		Commit: new(uint64(10)),

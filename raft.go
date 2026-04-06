@@ -504,8 +504,8 @@ func (r *raft) hasLeader() bool { return r.lead != None }
 
 func (r *raft) softState() SoftState { return SoftState{Lead: r.lead, RaftState: r.state} }
 
-func (r *raft) hardState() pb.HardState {
-	return pb.HardState{
+func (r *raft) hardState() *pb.HardState {
+	return &pb.HardState{
 		Term:   new(r.Term),
 		Vote:   new(r.Vote),
 		Commit: new(r.raftLog.committed),
@@ -2028,7 +2028,7 @@ func (r *raft) switchToConfig(cfg tracker.Config, trk tracker.ProgressMap) pb.Co
 	return cs
 }
 
-func (r *raft) loadState(state pb.HardState) {
+func (r *raft) loadState(state *pb.HardState) {
 	if state.GetCommit() < r.raftLog.committed || state.GetCommit() > r.raftLog.lastIndex() {
 		r.logger.Panicf("%x state.commit %d is out of range [%d, %d]", r.id, state.GetCommit(), r.raftLog.committed, r.raftLog.lastIndex())
 	}

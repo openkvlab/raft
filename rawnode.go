@@ -37,7 +37,7 @@ type RawNode struct {
 
 	// Mutable fields.
 	prevSoftSt     *SoftState
-	prevHardSt     pb.HardState
+	prevHardSt     *pb.HardState
 	stepsOnAdvance []*pb.Message
 }
 
@@ -190,7 +190,7 @@ func (rn *RawNode) readyWithoutAccept() Ready {
 
 // MustSync returns true if the hard state and count of Raft entries indicate
 // that a synchronous write to persistent storage is required.
-func MustSync(st, prevst pb.HardState, entsnum int) bool {
+func MustSync(st, prevst *pb.HardState, entsnum int) bool {
 	// Persistent state on all servers:
 	// (Updated on stable storage before responding to RPCs)
 	// currentTerm
@@ -237,9 +237,9 @@ func newStorageAppendMsg(r *raft, rd Ready) *pb.Message {
 		// If the Ready does not include a HardState update, make sure to not
 		// assign a value to any of the fields so that a HardState reconstructed
 		// from them will be empty (return true from raft.IsEmptyHardState).
-		m.Term = new(rd.GetTerm())
-		m.Vote = new(rd.GetVote())
-		m.Commit = new(rd.GetCommit())
+		m.Term = new(rd.HardState.GetTerm())
+		m.Vote = new(rd.HardState.GetVote())
+		m.Commit = new(rd.HardState.GetCommit())
 	}
 	if !IsEmptySnap(rd.Snapshot) {
 		m.Snapshot = rd.Snapshot
