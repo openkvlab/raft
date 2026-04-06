@@ -224,15 +224,15 @@ func DescribeEntry(e *pb.Entry, f EntryFormatter) string {
 	case pb.EntryType_EntryNormal:
 		formatted = f(e.GetData())
 	case pb.EntryType_EntryConfChange:
-		var cc pb.ConfChange
-		if err := proto.Unmarshal(e.GetData(), &cc); err != nil {
+		cc := &pb.ConfChange{}
+		if err := proto.Unmarshal(e.GetData(), cc); err != nil {
 			formatted = err.Error()
 		} else {
 			formatted = formatConfChange(cc)
 		}
 	case pb.EntryType_EntryConfChangeV2:
-		var cc pb.ConfChangeV2
-		if err := proto.Unmarshal(e.GetData(), &cc); err != nil {
+		cc := &pb.ConfChangeV2{}
+		if err := proto.Unmarshal(e.GetData(), cc); err != nil {
 			formatted = err.Error()
 		} else {
 			formatted = formatConfChange(cc)

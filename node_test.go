@@ -266,8 +266,8 @@ func TestNodeProposeConfig(t *testing.T) {
 		}
 		n.Advance()
 	}
-	cc := raftpb.ConfChange{Type: raftpb.ConfChangeType_ConfChangeAddNode.Enum(), NodeId: new(uint64(1))}
-	ccdata, err := proto.Marshal(&cc)
+	cc := &raftpb.ConfChange{Type: raftpb.ConfChangeType_ConfChangeAddNode.Enum(), NodeId: new(uint64(1))}
+	ccdata, err := proto.Marshal(cc)
 	require.NoError(t, err)
 	n.ProposeConfChange(t.Context(), cc)
 	n.Stop()
@@ -312,8 +312,8 @@ func TestNodeProposeAddDuplicateNode(t *testing.T) {
 					switch e.GetType() {
 					case raftpb.EntryType_EntryNormal:
 					case raftpb.EntryType_EntryConfChange:
-						var cc raftpb.ConfChange
-						proto.Unmarshal(e.GetData(), &cc) //nolint:errcheck
+						cc := &raftpb.ConfChange{}
+						proto.Unmarshal(e.GetData(), cc) //nolint:errcheck
 						n.ApplyConfChange(cc)
 						applied = true
 					}
@@ -326,8 +326,8 @@ func TestNodeProposeAddDuplicateNode(t *testing.T) {
 		}
 	}()
 
-	cc1 := raftpb.ConfChange{Type: raftpb.ConfChangeType_ConfChangeAddNode.Enum(), NodeId: new(uint64(1))}
-	ccdata1, _ := proto.Marshal(&cc1)
+	cc1 := &raftpb.ConfChange{Type: raftpb.ConfChangeType_ConfChangeAddNode.Enum(), NodeId: new(uint64(1))}
+	ccdata1, _ := proto.Marshal(cc1)
 	n.ProposeConfChange(ctx, cc1)
 	<-applyConfChan
 
@@ -336,8 +336,8 @@ func TestNodeProposeAddDuplicateNode(t *testing.T) {
 	<-applyConfChan
 
 	// the new node join should be ok
-	cc2 := raftpb.ConfChange{Type: raftpb.ConfChangeType_ConfChangeAddNode.Enum(), NodeId: new(uint64(2))}
-	ccdata2, _ := proto.Marshal(&cc2)
+	cc2 := &raftpb.ConfChange{Type: raftpb.ConfChangeType_ConfChangeAddNode.Enum(), NodeId: new(uint64(2))}
+	ccdata2, _ := proto.Marshal(cc2)
 	n.ProposeConfChange(ctx, cc2)
 	<-applyConfChan
 
@@ -741,8 +741,8 @@ func TestNodeProposeAddLearnerNode(t *testing.T) {
 					if ent.GetType() != raftpb.EntryType_EntryConfChange {
 						continue
 					}
-					var cc raftpb.ConfChange
-					proto.Unmarshal(ent.GetData(), &cc) //nolint:errcheck
+					cc := &raftpb.ConfChange{}
+					proto.Unmarshal(ent.GetData(), cc) //nolint:errcheck
 					state := n.ApplyConfChange(cc)
 					assert.True(t, len(state.Learners) > 0 && state.Learners[0] == cc.GetNodeId() && cc.GetNodeId() == 2,
 						"apply conf change should return new added learner: %v", state.String())
@@ -756,7 +756,7 @@ func TestNodeProposeAddLearnerNode(t *testing.T) {
 			}
 		}
 	}()
-	cc := raftpb.ConfChange{Type: raftpb.ConfChangeType_ConfChangeAddLearnerNode.Enum(), NodeId: new(uint64(2))}
+	cc := &raftpb.ConfChange{Type: raftpb.ConfChangeType_ConfChangeAddLearnerNode.Enum(), NodeId: new(uint64(2))}
 	n.ProposeConfChange(t.Context(), cc)
 	<-applyConfChan
 	close(stop)

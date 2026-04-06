@@ -76,7 +76,7 @@ func (rn *RawNode) Bootstrap(peers []Peer) error {
 	// the invariant that committed < unstable?
 	rn.raft.raftLog.committed = uint64(len(ents))
 	for _, peer := range peers {
-		rn.raft.applyConfChange(pb.ConfChange{NodeId: new(peer.ID), Type: pb.ConfChangeType_ConfChangeAddNode.Enum()}.AsV2())
+		rn.raft.applyConfChange((&pb.ConfChange{NodeId: new(peer.ID), Type: pb.ConfChangeType_ConfChangeAddNode.Enum()}).AsV2())
 	}
 	return nil
 }

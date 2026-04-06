@@ -1301,14 +1301,14 @@ func stepLeader(r *raft, m *pb.Message) error {
 			e := m.GetEntries()[i]
 			var cc pb.ConfChangeI
 			if e.GetType() == pb.EntryType_EntryConfChange {
-				var ccc pb.ConfChange
-				if err := proto.Unmarshal(e.GetData(), &ccc); err != nil {
+				ccc := &pb.ConfChange{}
+				if err := proto.Unmarshal(e.GetData(), ccc); err != nil {
 					panic(err)
 				}
 				cc = ccc
 			} else if e.GetType() == pb.EntryType_EntryConfChangeV2 {
-				var ccc pb.ConfChangeV2
-				if err := proto.Unmarshal(e.GetData(), &ccc); err != nil {
+				ccc := &pb.ConfChangeV2{}
+				if err := proto.Unmarshal(e.GetData(), ccc); err != nil {
 					panic(err)
 				}
 				cc = ccc
@@ -1942,7 +1942,7 @@ func (r *raft) promotable() bool {
 	return pr != nil && !pr.IsLearner && !r.raftLog.hasNextOrInProgressSnapshot()
 }
 
-func (r *raft) applyConfChange(cc pb.ConfChangeV2) *pb.ConfState {
+func (r *raft) applyConfChange(cc *pb.ConfChangeV2) *pb.ConfState {
 	cfg, trk, err := func() (tracker.Config, tracker.ProgressMap, error) {
 		changer := confchange.Changer{
 			Tracker:   r.trk,
