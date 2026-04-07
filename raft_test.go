@@ -3968,7 +3968,7 @@ func TestLogReplicationWithReorderedMessage(t *testing.T) {
 	require.False(t, m.GetReject())
 	require.Equal(t, uint64(2), m.GetIndex())
 	r1.Step(m)
-	m = expectOneMessage(t, r1)
+	expectOneMessage(t, r1)
 	require.Equal(t, uint64(2), r1.trk.Progress[2].Match)
 
 	// r1 observes a transient network issue to r2, hence transits to probe state.
@@ -3977,7 +3977,7 @@ func TestLogReplicationWithReorderedMessage(t *testing.T) {
 
 	// now r1 receives the delayed resp2.
 	r1.Step(resp2)
-	m = expectOneMessage(t, r1)
+	expectOneMessage(t, r1)
 	// r1 shall re-send MsgApp from match index even if resp2's reject hint is less than matching index.
 	require.Equal(t, r1.trk.Progress[2].Match, m.GetIndex())
 }
