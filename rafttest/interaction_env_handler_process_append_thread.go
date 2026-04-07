@@ -57,28 +57,25 @@ func (env *InteractionEnv) ProcessAppendThread(idx int) error {
 	m.Responses = nil
 	env.Output.WriteString("Processing:\n")
 	env.Output.WriteString(raft.DescribeMessage(m, defaultEntryFormatter) + "\n")
-	st := raftpb.HardState{
+	st := &raftpb.HardState{
 		Term:   new(m.GetTerm()),
 		Vote:   new(m.GetVote()),
 		Commit: new(m.GetCommit()),
 	}
-	var snap raftpb.Snapshot
-	if m.GetSnapshot() != nil {
-		snap = *m.GetSnapshot()
-	}
-	if err := processAppend(n, st, raftpb.EntrySliceFromPointers(m.Entries), snap); err != nil {
+	snap := m.GetSnapshot()
+	if err := processAppend(n, st, m.Entries, snap); err != nil {
 		return err
 	}
 
 	env.Output.WriteString("Responses:\n")
 	for _, m := range resps {
-		env.Output.WriteString(raft.DescribeMessage(*m, defaultEntryFormatter) + "\n")
+		env.Output.WriteString(raft.DescribeMessage(m, defaultEntryFormatter) + "\n")
 	}
-	env.Messages = append(env.Messages, raftpb.MessageSliceFromPointers(resps)...)
+	env.Messages = append(env.Messages, resps...)
 	return nil
 }
 
-func processAppend(n *Node, st raftpb.HardState, ents []raftpb.Entry, snap raftpb.Snapshot) error {
+func processAppend(n *Node, st *raftpb.HardState, ents []*raftpb.Entry, snap *raftpb.Snapshot) error {
 	// TODO(tbg): the order of operations here is not necessarily safe. See:
 	// https://github.com/etcd-io/etcd/pull/10861
 	s := n.Storage

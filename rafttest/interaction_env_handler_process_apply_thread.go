@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/cockroachdb/datadriven"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/openkvlab/raft"
 	"github.com/openkvlab/raft/raftpb"
@@ -56,33 +57,33 @@ func (env *InteractionEnv) ProcessApplyThread(idx int) error {
 	m.Responses = nil
 	env.Output.WriteString("Processing:\n")
 	env.Output.WriteString(raft.DescribeMessage(m, defaultEntryFormatter) + "\n")
-	if err := processApply(n, raftpb.EntrySliceFromPointers(m.GetEntries())); err != nil {
+	if err := processApply(n, m.GetEntries()); err != nil {
 		return err
 	}
 
 	env.Output.WriteString("Responses:\n")
 	for _, m := range resps {
-		env.Output.WriteString(raft.DescribeMessage(*m, defaultEntryFormatter) + "\n")
+		env.Output.WriteString(raft.DescribeMessage(m, defaultEntryFormatter) + "\n")
 	}
-	env.Messages = append(env.Messages, raftpb.MessageSliceFromPointers(resps)...)
+	env.Messages = append(env.Messages, resps...)
 	return nil
 }
 
-func processApply(n *Node, ents []raftpb.Entry) error {
+func processApply(n *Node, ents []*raftpb.Entry) error {
 	for _, ent := range ents {
 		var update []byte
 		var cs *raftpb.ConfState
 		switch ent.GetType() {
 		case raftpb.EntryType_EntryConfChange:
-			var cc raftpb.ConfChange
-			if err := cc.Unmarshal(ent.GetData()); err != nil {
+			cc := &raftpb.ConfChange{}
+			if err := proto.Unmarshal(ent.GetData(), cc); err != nil {
 				return err
 			}
 			update = cc.Context
 			cs = n.RawNode.ApplyConfChange(cc)
 		case raftpb.EntryType_EntryConfChangeV2:
-			var cc raftpb.ConfChangeV2
-			if err := cc.Unmarshal(ent.GetData()); err != nil {
+			cc := &raftpb.ConfChangeV2{}
+			if err := proto.Unmarshal(ent.GetData(), cc); err != nil {
 				return err
 			}
 			cs = n.RawNode.ApplyConfChange(cc)
@@ -94,8 +95,8 @@ func processApply(n *Node, ents []raftpb.Entry) error {
 		// Record the new state by starting with the current state and applying
 		// the command.
 		lastSnap := n.History[len(n.History)-1]
-		var snap raftpb.Snapshot
-		raftpb.EnsureSnapshot(&snap)
+		snap := &raftpb.Snapshot{}
+		raftpb.EnsureSnapshot(snap)
 		snap.Data = append(snap.Data, lastSnap.Data...)
 		// NB: this hard-codes an "appender" state machine.
 		snap.Data = append(snap.Data, update...)

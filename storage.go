@@ -50,7 +50,7 @@ type Storage interface {
 	// TODO(tbg): split this into two interfaces, LogStorage and StateStorage.
 
 	// InitialState returns the saved HardState and ConfState information.
-	InitialState() (pb.HardState, pb.ConfState, error)
+	InitialState() (*pb.HardState, *pb.ConfState, error)
 
 	// Entries returns a slice of consecutive log entries in the range [lo, hi),
 	// starting from lo. The maxSize limits the total size of the log entries
@@ -71,7 +71,7 @@ type Storage interface {
 	//
 	// Returns ErrCompacted if entry lo has been compacted, or ErrUnavailable if
 	// encountered an unavailable entry in [lo, hi).
-	Entries(lo, hi, maxSize uint64) ([]pb.Entry, error)
+	Entries(lo, hi, maxSize uint64) ([]*pb.Entry, error)
 
 	// Term returns the term of entry i, which must be in the range
 	// [FirstIndex()-1, LastIndex()]. The term of the entry before
@@ -89,7 +89,7 @@ type Storage interface {
 	// If snapshot is temporarily unavailable, it should return ErrSnapshotTemporarilyUnavailable,
 	// so raft state machine could know that Storage needs some time to prepare
 	// snapshot and call Snapshot later.
-	Snapshot() (pb.Snapshot, error)
+	Snapshot() (*pb.Snapshot, error)
 }
 
 type inMemStorageCallStats struct {
@@ -104,10 +104,10 @@ type MemoryStorage struct {
 	// goroutine.
 	sync.Mutex
 
-	hardState pb.HardState
-	snapshot  pb.Snapshot
+	hardState *pb.HardState
+	snapshot  *pb.Snapshot
 	// ents[i] has raft log position i+snapshot.GetMetadata().GetIndex()
-	ents []pb.Entry
+	ents []*pb.Entry
 
 	callStats inMemStorageCallStats
 }
@@ -116,22 +116,31 @@ type MemoryStorage struct {
 func NewMemoryStorage() *MemoryStorage {
 	ms := &MemoryStorage{
 		// When starting from scratch populate the list with a dummy entry at term zero.
-		ents: make([]pb.Entry, 1),
+		ents:     []*pb.Entry{{}},
+		snapshot: &pb.Snapshot{},
 	}
-	pb.EnsureSnapshot(&ms.snapshot)
+	pb.EnsureSnapshot(ms.snapshot)
 	return ms
 }
 
 // InitialState implements the Storage interface.
-func (ms *MemoryStorage) InitialState() (pb.HardState, pb.ConfState, error) {
+func (ms *MemoryStorage) InitialState() (*pb.HardState, *pb.ConfState, error) {
 	ms.callStats.initialState++
 	cs := ms.snapshot.GetMetadata().GetConfState()
 	cs = pb.EnsureConfState(cs)
-	return ms.hardState, *cs, nil
+	return ms.hardState, cs, nil
+}
+
+// ensureSnapshot initializes ms.snapshot if nil.
+func (ms *MemoryStorage) ensureSnapshot() {
+	if ms.snapshot == nil {
+		ms.snapshot = &pb.Snapshot{}
+		pb.EnsureSnapshot(ms.snapshot)
+	}
 }
 
 // SetHardState saves the current HardState.
-func (ms *MemoryStorage) SetHardState(st pb.HardState) error {
+func (ms *MemoryStorage) SetHardState(st *pb.HardState) error {
 	ms.Lock()
 	defer ms.Unlock()
 	ms.hardState = st
@@ -139,7 +148,7 @@ func (ms *MemoryStorage) SetHardState(st pb.HardState) error {
 }
 
 // Entries implements the Storage interface.
-func (ms *MemoryStorage) Entries(lo, hi, maxSize uint64) ([]pb.Entry, error) {
+func (ms *MemoryStorage) Entries(lo, hi, maxSize uint64) ([]*pb.Entry, error) {
 	ms.Lock()
 	defer ms.Unlock()
 	ms.callStats.entries++
@@ -202,16 +211,17 @@ func (ms *MemoryStorage) firstIndex() uint64 {
 }
 
 // Snapshot implements the Storage interface.
-func (ms *MemoryStorage) Snapshot() (pb.Snapshot, error) {
+func (ms *MemoryStorage) Snapshot() (*pb.Snapshot, error) {
 	ms.Lock()
 	defer ms.Unlock()
 	ms.callStats.snapshot++
+	ms.ensureSnapshot()
 	return ms.snapshot, nil
 }
 
 // ApplySnapshot overwrites the contents of this Storage object with
 // those of the given snapshot.
-func (ms *MemoryStorage) ApplySnapshot(snap pb.Snapshot) error {
+func (ms *MemoryStorage) ApplySnapshot(snap *pb.Snapshot) error {
 	ms.Lock()
 	defer ms.Unlock()
 
@@ -226,7 +236,7 @@ func (ms *MemoryStorage) ApplySnapshot(snap pb.Snapshot) error {
 	}
 
 	ms.snapshot = snap
-	ms.ents = []pb.Entry{{Term: new(snap.GetMetadata().GetTerm()), Index: new(snap.GetMetadata().GetIndex())}}
+	ms.ents = []*pb.Entry{{Term: new(snap.GetMetadata().GetTerm()), Index: new(snap.GetMetadata().GetIndex())}}
 	return nil
 }
 
@@ -234,11 +244,11 @@ func (ms *MemoryStorage) ApplySnapshot(snap pb.Snapshot) error {
 // can be used to reconstruct the state at that point.
 // If any configuration changes have been made since the last compaction,
 // the result of the last ApplyConfChange must be passed in.
-func (ms *MemoryStorage) CreateSnapshot(i uint64, cs *pb.ConfState, data []byte) (pb.Snapshot, error) {
+func (ms *MemoryStorage) CreateSnapshot(i uint64, cs *pb.ConfState, data []byte) (*pb.Snapshot, error) {
 	ms.Lock()
 	defer ms.Unlock()
 	if i <= ms.snapshot.GetMetadata().GetIndex() {
-		return pb.Snapshot{}, ErrSnapOutOfDate
+		return nil, ErrSnapOutOfDate
 	}
 
 	offset := ms.ents[0].GetIndex()
@@ -246,7 +256,7 @@ func (ms *MemoryStorage) CreateSnapshot(i uint64, cs *pb.ConfState, data []byte)
 		getLogger().Panicf("snapshot %d is out of bound lastindex(%d)", i, ms.lastIndex())
 	}
 
-	pb.EnsureSnapshot(&ms.snapshot)
+	ms.ensureSnapshot()
 	ms.snapshot.Metadata.Index = new(i)
 	ms.snapshot.Metadata.Term = new(ms.ents[i-offset].GetTerm())
 	if cs != nil {
@@ -274,9 +284,8 @@ func (ms *MemoryStorage) Compact(compactIndex uint64) error {
 	// NB: allocate a new slice instead of reusing the old ms.ents. Entries in
 	// ms.ents are immutable, and can be referenced from outside MemoryStorage
 	// through slices returned by ms.Entries().
-	ents := make([]pb.Entry, 1, uint64(len(ms.ents))-i)
-	ents[0].Index = new(ms.ents[i].GetIndex())
-	ents[0].Term = new(ms.ents[i].GetTerm())
+	ents := make([]*pb.Entry, 1, uint64(len(ms.ents))-i)
+	ents[0] = &pb.Entry{Index: new(ms.ents[i].GetIndex()), Term: new(ms.ents[i].GetTerm())}
 	ents = append(ents, ms.ents[i+1:]...)
 	ms.ents = ents
 	return nil
@@ -285,7 +294,7 @@ func (ms *MemoryStorage) Compact(compactIndex uint64) error {
 // Append the new entries to storage.
 // TODO (xiangli): ensure the entries are continuous and
 // entries[0].GetIndex() > ms.entries[0].Index
-func (ms *MemoryStorage) Append(entries []pb.Entry) error {
+func (ms *MemoryStorage) Append(entries []*pb.Entry) error {
 	if len(entries) == 0 {
 		return nil
 	}

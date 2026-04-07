@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"strings"
 
+	"google.golang.org/protobuf/proto"
+
 	pb "github.com/openkvlab/raft/raftpb"
 )
 
@@ -78,7 +80,7 @@ func voteRespMsgType(msgt pb.MessageType) pb.MessageType {
 	}
 }
 
-func DescribeHardState(hs pb.HardState) string {
+func DescribeHardState(hs *pb.HardState) string {
 	var buf strings.Builder
 	fmt.Fprintf(&buf, "Term:%d", hs.GetTerm())
 	if hs.GetVote() != 0 {
@@ -102,7 +104,7 @@ func DescribeConfState(state *pb.ConfState) string {
 	)
 }
 
-func DescribeSnapshot(snap pb.Snapshot) string {
+func DescribeSnapshot(snap *pb.Snapshot) string {
 	m := snap.GetMetadata()
 	return fmt.Sprintf("Index:%d Term:%d ConfState:%s", m.GetIndex(), m.GetTerm(), DescribeConfState(m.GetConfState()))
 }
@@ -150,11 +152,11 @@ type EntryFormatter func([]byte) string
 
 // DescribeMessage returns a concise human-readable description of a
 // Message for debugging.
-func DescribeMessage(m pb.Message, f EntryFormatter) string {
+func DescribeMessage(m *pb.Message, f EntryFormatter) string {
 	return describeMessageWithIndent("", m, f)
 }
 
-func describeMessageWithIndent(indent string, m pb.Message, f EntryFormatter) string {
+func describeMessageWithIndent(indent string, m *pb.Message, f EntryFormatter) string {
 	var buf bytes.Buffer
 	fmt.Fprintf(&buf, "%s%s->%s %v Term:%d Log:%d/%d", indent,
 		describeTarget(m.GetFrom()), describeTarget(m.GetTo()), m.GetType(), m.GetTerm(), m.GetLogTerm(), m.GetIndex())
@@ -168,23 +170,23 @@ func describeMessageWithIndent(indent string, m pb.Message, f EntryFormatter) st
 		fmt.Fprintf(&buf, " Vote:%d", m.GetVote())
 	}
 	if ln := len(m.GetEntries()); ln == 1 {
-		fmt.Fprintf(&buf, " Entries:[%s]", DescribeEntry(*m.GetEntries()[0], f))
+		fmt.Fprintf(&buf, " Entries:[%s]", DescribeEntry(m.GetEntries()[0], f))
 	} else if ln > 1 {
 		fmt.Fprint(&buf, " Entries:[")
 		for _, e := range m.GetEntries() {
 			fmt.Fprintf(&buf, "\n%s  ", indent)
-			buf.WriteString(DescribeEntry(*e, f))
+			buf.WriteString(DescribeEntry(e, f))
 		}
 		fmt.Fprintf(&buf, "\n%s]", indent)
 	}
-	if s := m.GetSnapshot(); s != nil && !IsEmptySnap(*s) {
-		fmt.Fprintf(&buf, "\n%s  Snapshot: %s", indent, DescribeSnapshot(*s))
+	if s := m.GetSnapshot(); !IsEmptySnap(s) {
+		fmt.Fprintf(&buf, "\n%s  Snapshot: %s", indent, DescribeSnapshot(s))
 	}
 	if len(m.GetResponses()) > 0 {
 		fmt.Fprintf(&buf, " Responses:[")
 		for _, m := range m.GetResponses() {
 			buf.WriteString("\n")
-			buf.WriteString(describeMessageWithIndent(indent+"  ", *m, f))
+			buf.WriteString(describeMessageWithIndent(indent+"  ", m, f))
 		}
 		fmt.Fprintf(&buf, "\n%s]", indent)
 	}
@@ -206,7 +208,7 @@ func describeTarget(id uint64) string {
 
 // DescribeEntry returns a concise human-readable description of an
 // Entry for debugging.
-func DescribeEntry(e pb.Entry, f EntryFormatter) string {
+func DescribeEntry(e *pb.Entry, f EntryFormatter) string {
 	if f == nil {
 		f = func(data []byte) string { return fmt.Sprintf("%q", data) }
 	}
@@ -222,15 +224,15 @@ func DescribeEntry(e pb.Entry, f EntryFormatter) string {
 	case pb.EntryType_EntryNormal:
 		formatted = f(e.GetData())
 	case pb.EntryType_EntryConfChange:
-		var cc pb.ConfChange
-		if err := cc.Unmarshal(e.GetData()); err != nil {
+		cc := &pb.ConfChange{}
+		if err := proto.Unmarshal(e.GetData(), cc); err != nil {
 			formatted = err.Error()
 		} else {
 			formatted = formatConfChange(cc)
 		}
 	case pb.EntryType_EntryConfChangeV2:
-		var cc pb.ConfChangeV2
-		if err := cc.Unmarshal(e.GetData()); err != nil {
+		cc := &pb.ConfChangeV2{}
+		if err := proto.Unmarshal(e.GetData(), cc); err != nil {
 			formatted = err.Error()
 		} else {
 			formatted = formatConfChange(cc)
@@ -244,7 +246,7 @@ func DescribeEntry(e pb.Entry, f EntryFormatter) string {
 
 // DescribeEntries calls DescribeEntry for each Entry, adding a newline to
 // each.
-func DescribeEntries(ents []pb.Entry, f EntryFormatter) string {
+func DescribeEntries(ents []*pb.Entry, f EntryFormatter) string {
 	var buf bytes.Buffer
 	for _, e := range ents {
 		_, _ = buf.WriteString(DescribeEntry(e, f) + "\n")
@@ -256,20 +258,11 @@ func DescribeEntries(ents []pb.Entry, f EntryFormatter) string {
 // entries.
 type entryEncodingSize uint64
 
-func entsSize(ents []pb.Entry) entryEncodingSize {
-	var size entryEncodingSize
-	for _, ent := range ents {
-		size += entryEncodingSize(ent.Size())
-	}
-	return size
-}
-
-// entsPtrSize calculates the total byte size of a slice of Entry pointers.
-func entsPtrSize(ents []*pb.Entry) entryEncodingSize {
+func entsSize(ents []*pb.Entry) entryEncodingSize {
 	var size entryEncodingSize
 	for _, ent := range ents {
 		if ent != nil {
-			size += entryEncodingSize(ent.Size())
+			size += entryEncodingSize(proto.Size(ent))
 		}
 	}
 	return size
@@ -279,13 +272,13 @@ func entsPtrSize(ents []*pb.Entry) entryEncodingSize {
 // its total byte size does not exceed maxSize. Always returns a non-empty slice
 // if the input is non-empty, so, as an exception, if the size of the first
 // entry exceeds maxSize, a non-empty slice with just this entry is returned.
-func limitSize(ents []pb.Entry, maxSize entryEncodingSize) []pb.Entry {
+func limitSize(ents []*pb.Entry, maxSize entryEncodingSize) []*pb.Entry {
 	if len(ents) == 0 {
 		return ents
 	}
-	size := ents[0].Size()
+	size := proto.Size(ents[0])
 	for limit := 1; limit < len(ents); limit++ {
-		size += ents[limit].Size()
+		size += proto.Size(ents[limit])
 		if entryEncodingSize(size) > maxSize {
 			return ents[:limit]
 		}
@@ -300,32 +293,23 @@ func limitSize(ents []pb.Entry, maxSize entryEncodingSize) []pb.Entry {
 type entryPayloadSize uint64
 
 // payloadSize is the size of the payload of the provided entry.
-func payloadSize(e pb.Entry) entryPayloadSize {
+func payloadSize(e *pb.Entry) entryPayloadSize {
 	return entryPayloadSize(len(e.GetData()))
 }
 
 // payloadsSize is the size of the payloads of the provided entries.
-func payloadsSize(ents []pb.Entry) entryPayloadSize {
-	var s entryPayloadSize
-	for _, e := range ents {
-		s += payloadSize(e)
-	}
-	return s
-}
-
-// payloadsPtrSize calculates the total payload size of a slice of Entry pointers.
-func payloadsPtrSize(ents []*pb.Entry) entryPayloadSize {
+func payloadsSize(ents []*pb.Entry) entryPayloadSize {
 	var s entryPayloadSize
 	for _, e := range ents {
 		if e != nil {
-			s += payloadSize(*e)
+			s += payloadSize(e)
 		}
 	}
 	return s
 }
 
-func assertConfStatesEquivalent(l Logger, cs1, cs2 pb.ConfState) {
-	err := cs1.Equivalent(cs2)
+func assertConfStatesEquivalent(l Logger, cs1, cs2 *pb.ConfState) {
+	err := cs1.Equivalent(*cs2)
 	if err == nil {
 		return
 	}
@@ -338,12 +322,12 @@ func assertConfStatesEquivalent(l Logger, cs1, cs2 pb.ConfState) {
 //
 // Use this instead of standard append in situations when this is the last
 // append to dst, so there is no sense in allocating more than needed.
-func extend(dst, vals []pb.Entry) []pb.Entry {
+func extend(dst, vals []*pb.Entry) []*pb.Entry {
 	need := len(dst) + len(vals)
 	if need <= cap(dst) {
 		return append(dst, vals...) // does not allocate
 	}
-	buf := make([]pb.Entry, need, need) // allocates precisely what's needed
+	buf := make([]*pb.Entry, need, need) // allocates precisely what's needed
 	copy(buf, dst)
 	copy(buf[len(dst):], vals)
 	return buf
