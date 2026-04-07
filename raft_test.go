@@ -267,7 +267,7 @@ func TestUncommittedEntryLimit(t *testing.T) {
 	// pushes us above the limit because we were beneath it before the proposal.
 	propEnts = make([]*pb.Entry, 2*maxEntries)
 	for i := range propEnts {
-		propEnts[i] = testEntry
+		propEnts[i] = &pb.Entry{Data: testEntry.Data}
 	}
 	propMsgLarge := &pb.Message{From: new(uint64(1)), To: new(uint64(1)), Type: new(pb.MessageType_MsgProp), Entries: propEnts}
 	require.NoError(t, r.Step(propMsgLarge))
@@ -2771,7 +2771,7 @@ func TestStepIgnoreConfig(t *testing.T) {
 	wents := []*pb.Entry{{Type: pb.EntryType_EntryNormal.Enum(), Term: new(uint64(1)), Index: new(uint64(3)), Data: nil}}
 	ents, err := r.raftLog.entries(index+1, noLimit)
 	require.NoError(t, err)
-	assert.Equal(t, wents, ents)
+	assertEntriesEqual(t, wents, ents)
 	assert.Equal(t, pendingConfIndex, r.pendingConfIndex)
 }
 

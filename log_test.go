@@ -182,7 +182,7 @@ func TestAppend(t *testing.T) {
 			require.Equal(t, tt.windex, raftLog.append(tt.ents...))
 			g, err := raftLog.entries(1, noLimit)
 			require.NoError(t, err)
-			require.Equal(t, tt.wents, g)
+			requireEntriesEqual(t, tt.wents, g)
 			require.Equal(t, tt.wunstable, raftLog.unstable.offset)
 		})
 	}
@@ -319,7 +319,7 @@ func TestLogMaybeAppend(t *testing.T) {
 			if gappend && len(tt.ents) != 0 {
 				gents, err := raftLog.slice(raftLog.lastIndex()-uint64(len(tt.ents))+1, raftLog.lastIndex()+1, noLimit)
 				require.NoError(t, err)
-				require.Equal(t, tt.ents, gents)
+				requireEntriesEqual(t, tt.ents, gents)
 			}
 		})
 	}
@@ -467,7 +467,7 @@ func TestNextCommittedEnts(t *testing.T) {
 				newSnap.Metadata.Index = new(newSnap.GetMetadata().GetIndex() + 1)
 				raftLog.restore(&newSnap)
 			}
-			require.Equal(t, tt.wents, raftLog.nextCommittedEnts(tt.allowUnstable))
+			requireEntriesEqual(t, tt.wents, raftLog.nextCommittedEnts(tt.allowUnstable))
 		})
 	}
 }
@@ -597,7 +597,7 @@ func TestNextUnstableEnts(t *testing.T) {
 			if l := len(ents); l > 0 {
 				raftLog.stableTo(pbEntryID(ents[l-1]))
 			}
-			require.Equal(t, tt.wents, ents)
+			requireEntriesEqual(t, tt.wents, ents)
 			require.Equal(t, previousEnts[len(previousEnts)-1].GetIndex()+1, raftLog.unstable.offset)
 		})
 	}
@@ -966,7 +966,7 @@ func TestSlice(t *testing.T) {
 			g, err := l.slice(tt.lo, tt.hi, entryEncodingSize(tt.lim))
 			require.False(t, tt.lo <= offset && err != ErrCompacted)
 			require.False(t, tt.lo > offset && err != nil)
-			require.Equal(t, tt.w, g)
+			requireEntriesEqual(t, tt.w, g)
 		})
 	}
 }

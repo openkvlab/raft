@@ -292,7 +292,7 @@ func TestRawNodeProposeAndConfChange(t *testing.T) {
 			require.Equal(t, typ, entries[1].GetType())
 			assert.Equal(t, ccdata, entries[1].GetData())
 
-			require.Equal(t, &tc.exp, cs)
+			requireProtoEqual(t, &tc.exp, cs)
 
 			var maybePlusOne uint64
 			if autoLeave, ok := tc.cc.AsV2().EnterJoint(); ok && autoLeave {
@@ -329,12 +329,12 @@ func TestRawNodeProposeAndConfChange(t *testing.T) {
 			require.Equal(t, pb.EntryType_EntryConfChangeV2, rd.Entries[0].GetType())
 			cc := &pb.ConfChangeV2{}
 			require.NoError(t, proto.Unmarshal(rd.Entries[0].GetData(), cc))
-			require.Equal(t, &pb.ConfChangeV2{Context: context}, cc)
+			requireProtoEqual(t, &pb.ConfChangeV2{Context: context}, cc)
 
 			// Lie and pretend the ConfChange applied. It won't do so because now
 			// we require the joint quorum and we're only running one node.
 			cs = rawNode.ApplyConfChange(cc)
-			require.Equal(t, tc.exp2, cs)
+			requireProtoEqual(t, tc.exp2, cs)
 
 			rawNode.Advance(rd)
 		})
@@ -409,7 +409,7 @@ func TestRawNodeJointAutoLeave(t *testing.T) {
 	require.Equal(t, pb.EntryType_EntryConfChangeV2, entries[1].GetType())
 	assert.Equal(t, ccdata, entries[1].GetData())
 
-	require.Equal(t, &expCs, cs)
+	requireProtoEqual(t, &expCs, cs)
 
 	require.Zero(t, rawNode.raft.pendingConfIndex)
 
@@ -440,11 +440,11 @@ func TestRawNodeJointAutoLeave(t *testing.T) {
 	require.Equal(t, pb.EntryType_EntryConfChangeV2, rd.Entries[0].GetType())
 	cc := &pb.ConfChangeV2{}
 	require.NoError(t, proto.Unmarshal(rd.Entries[0].GetData(), cc))
-	require.Equal(t, &pb.ConfChangeV2{Context: nil}, cc)
+	requireProtoEqual(t, &pb.ConfChangeV2{Context: nil}, cc)
 	// Lie and pretend the ConfChange applied. It won't do so because now
 	// we require the joint quorum and we're only running one node.
 	cs = rawNode.ApplyConfChange(cc)
-	require.Equal(t, exp2Cs, *cs)
+	requireProtoEqual(t, &exp2Cs, cs)
 }
 
 // TestRawNodeProposeAddDuplicateNode ensures that two proposes to add the same node should
@@ -642,7 +642,7 @@ func TestRawNodeStart(t *testing.T) {
 	require.True(t, rawNode.HasReady())
 
 	rd = rawNode.Ready()
-	require.Equal(t, entries, rd.Entries)
+	requireEntriesEqual(t, entries, rd.Entries)
 	storage.Append(rd.Entries)
 	rawNode.Advance(rd)
 
@@ -654,7 +654,7 @@ func TestRawNodeStart(t *testing.T) {
 
 	rd.SoftState, want.SoftState = nil, nil
 
-	require.Equal(t, want, rd)
+	requireReadyEqual(t, want, rd)
 	assert.False(t, rawNode.HasReady())
 }
 
@@ -956,22 +956,22 @@ func TestRawNodeConsumeReady(t *testing.T) {
 	rn.raft.msgs = append(rn.raft.msgs, m1)
 	rd := rn.readyWithoutAccept()
 	require.Len(t, rd.Messages, 1)
-	require.Equal(t, m1, rd.Messages[0])
+	requireProtoEqual(t, m1, rd.Messages[0])
 	require.Len(t, rn.raft.msgs, 1)
-	require.Equal(t, m1, rn.raft.msgs[0])
+	requireProtoEqual(t, m1, rn.raft.msgs[0])
 
 	// Now call Ready() which should move the message into the Ready (as opposed
 	// to leaving it in both places).
 	rd = rn.Ready()
 	require.Empty(t, rn.raft.msgs)
 	require.Len(t, rd.Messages, 1)
-	require.Equal(t, m1, rd.Messages[0])
+	requireProtoEqual(t, m1, rd.Messages[0])
 
 	// Add a message to raft to make sure that Advance() doesn't drop it.
 	rn.raft.msgs = append(rn.raft.msgs, m2)
 	rn.Advance(rd)
 	require.Len(t, rn.raft.msgs, 1)
-	require.Equal(t, m2, rn.raft.msgs[0])
+	requireProtoEqual(t, m2, rn.raft.msgs[0])
 }
 
 func BenchmarkRawNode(b *testing.B) {

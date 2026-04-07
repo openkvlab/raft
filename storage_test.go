@@ -88,7 +88,7 @@ func TestStorageEntries(t *testing.T) {
 			s := &MemoryStorage{ents: ents}
 			entries, err := s.Entries(tt.lo, tt.hi, tt.maxsize)
 			require.Equal(t, tt.werr, err)
-			require.Equal(t, tt.wentries, entries)
+			requireEntriesEqual(t, tt.wentries, entries)
 		})
 	}
 }
@@ -168,7 +168,7 @@ func TestStorageCreateSnapshot(t *testing.T) {
 			s := &MemoryStorage{ents: ents}
 			snap, err := s.CreateSnapshot(tt.i, cs, data)
 			require.Equal(t, tt.werr, err)
-			require.Equal(t, tt.wsnap, snap)
+			require.True(t, proto.Equal(tt.wsnap, snap), "snapshot mismatch: expected %v, got %v", tt.wsnap, snap)
 		})
 	}
 }
@@ -225,7 +225,7 @@ func TestStorageAppend(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			s := &MemoryStorage{ents: ents}
 			require.Equal(t, tt.werr, s.Append(tt.entries))
-			require.Equal(t, tt.wentries, s.ents)
+			requireEntriesEqual(t, tt.wentries, s.ents)
 		})
 	}
 }

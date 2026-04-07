@@ -143,6 +143,45 @@ func TestIsResponseMsg(t *testing.T) {
 	}
 }
 
+// requireProtoEqual checks that two proto.Message values are equal using
+// proto.Equal to avoid failures from internal protobuf lazy-initialization state.
+func requireProtoEqual(t *testing.T, expected, actual proto.Message, msgAndArgs ...interface{}) {
+	t.Helper()
+	if !proto.Equal(expected, actual) {
+		require.Fail(t, fmt.Sprintf("proto not equal:\nexpected: %v\nactual:   %v", expected, actual), msgAndArgs...)
+	}
+}
+
+// assertEntriesEqual compares two []*pb.Entry slices using proto.Equal to
+// avoid failures from internal protobuf lazy-initialization state.
+func assertEntriesEqual(t *testing.T, expected, actual []*pb.Entry, msgAndArgs ...interface{}) {
+	t.Helper()
+	if len(expected) != len(actual) {
+		assert.Fail(t, fmt.Sprintf("entry slice lengths differ: expected %d, got %d", len(expected), len(actual)), msgAndArgs...)
+		return
+	}
+	for i := range expected {
+		if !proto.Equal(expected[i], actual[i]) {
+			assert.Fail(t, fmt.Sprintf("entry[%d] not equal:\nexpected: %v\nactual:   %v", i, expected[i], actual[i]), msgAndArgs...)
+		}
+	}
+}
+
+// requireEntriesEqual compares two []*pb.Entry slices using proto.Equal to
+// avoid failures from internal protobuf lazy-initialization state.
+func requireEntriesEqual(t *testing.T, expected, actual []*pb.Entry, msgAndArgs ...interface{}) {
+	t.Helper()
+	if len(expected) != len(actual) {
+		require.Fail(t, fmt.Sprintf("entry slice lengths differ: expected %d, got %d", len(expected), len(actual)), msgAndArgs...)
+		return
+	}
+	for i := range expected {
+		if !proto.Equal(expected[i], actual[i]) {
+			require.Fail(t, fmt.Sprintf("entry[%d] not equal:\nexpected: %v\nactual:   %v", i, expected[i], actual[i]), msgAndArgs...)
+		}
+	}
+}
+
 // requireReadyEqual compares two Ready structs using proto.Equal for protobuf
 // fields to avoid failures from internal protobuf lazy-initialization state.
 func requireReadyEqual(t *testing.T, expected, actual Ready, msgAndArgs ...interface{}) {

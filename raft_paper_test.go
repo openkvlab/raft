@@ -384,7 +384,7 @@ func TestLeaderStartReplication(t *testing.T) {
 		{From: new(uint64(1)), To: new(uint64(2)), Term: new(uint64(1)), Type: new(pb.MessageType_MsgApp), Index: new(li), LogTerm: new(uint64(1)), Entries: wents, Commit: new(li)},
 		{From: new(uint64(1)), To: new(uint64(3)), Term: new(uint64(1)), Type: new(pb.MessageType_MsgApp), Index: new(li), LogTerm: new(uint64(1)), Entries: wents, Commit: new(li)},
 	}, msgs)
-	assert.Equal(t, []*pb.Entry{
+	assertEntriesEqual(t, []*pb.Entry{
 		{Index: new(li + 1), Term: new(uint64(1)), Data: []byte("some data")},
 	}, r.raftLog.nextUnstableEnts())
 }
@@ -410,7 +410,7 @@ func TestLeaderCommitEntry(t *testing.T) {
 	}
 
 	assert.Equal(t, li+1, r.raftLog.committed)
-	assert.Equal(t, []*pb.Entry{
+	assertEntriesEqual(t, []*pb.Entry{
 		{Index: new(li + 1), Term: new(uint64(1)), Data: []byte("some data")},
 	}, r.raftLog.nextCommittedEnts(true))
 	msgs := r.readMessages()
@@ -486,7 +486,7 @@ func TestLeaderCommitPrecedingEntries(t *testing.T) {
 		}
 
 		li := uint64(len(tt))
-		assert.Equal(t, append(tt,
+		assertEntriesEqual(t, append(tt,
 			&pb.Entry{Term: new(uint64(3)), Index: new(li + 1)},
 			&pb.Entry{Term: new(uint64(3)), Index: new(li + 2), Data: []byte("some data")},
 		), r.raftLog.nextCommittedEnts(true), "#%d", i)
@@ -630,8 +630,8 @@ func TestFollowerAppendEntries(t *testing.T) {
 
 		r.Step(&pb.Message{From: new(uint64(2)), To: new(uint64(1)), Type: new(pb.MessageType_MsgApp), Term: new(uint64(2)), LogTerm: new(tt.term), Index: new(tt.index), Entries: tt.ents})
 
-		assert.Equal(t, tt.wents, r.raftLog.allEntries(), "#%d", i)
-		assert.Equal(t, tt.wunstable, r.raftLog.nextUnstableEnts(), "#%d", i)
+		assertEntriesEqual(t, tt.wents, r.raftLog.allEntries(), "#%d", i)
+		assertEntriesEqual(t, tt.wunstable, r.raftLog.nextUnstableEnts(), "#%d", i)
 	}
 }
 

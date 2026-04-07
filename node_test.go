@@ -212,7 +212,7 @@ func TestNodeReadIndexToOldLeader(t *testing.T) {
 	// verify r2(follower) forwards this message to r1(leader) with term not set
 	require.Len(t, r2.msgs, 1)
 	readIndxMsg1 := &raftpb.Message{From: new(uint64(2)), To: new(uint64(1)), Type: new(raftpb.MessageType_MsgReadIndex), Entries: testEntries}
-	require.Equal(t, readIndxMsg1, r2.msgs[0])
+	requireProtoEqual(t, readIndxMsg1, r2.msgs[0])
 
 	// send readindex request to r3(follower)
 	r3.Step(&raftpb.Message{From: new(uint64(3)), To: new(uint64(3)), Type: new(raftpb.MessageType_MsgReadIndex), Entries: testEntries})
@@ -220,7 +220,7 @@ func TestNodeReadIndexToOldLeader(t *testing.T) {
 	// verify r3(follower) forwards this message to r1(leader) with term not set as well.
 	require.Len(t, r3.msgs, 1)
 	readIndxMsg2 := &raftpb.Message{From: new(uint64(3)), To: new(uint64(1)), Type: new(raftpb.MessageType_MsgReadIndex), Entries: testEntries}
-	require.Equal(t, readIndxMsg2, r3.msgs[0])
+	requireProtoEqual(t, readIndxMsg2, r3.msgs[0])
 
 	// now elect r3 as leader
 	nt.send(&raftpb.Message{From: new(uint64(3)), To: new(uint64(3)), Type: new(raftpb.MessageType_MsgHup)})
@@ -232,9 +232,9 @@ func TestNodeReadIndexToOldLeader(t *testing.T) {
 	// verify r1(follower) forwards these messages again to r3(new leader)
 	require.Len(t, r1.msgs, 2)
 	readIndxMsg3 := &raftpb.Message{From: new(uint64(2)), To: new(uint64(3)), Type: new(raftpb.MessageType_MsgReadIndex), Entries: testEntries}
-	require.Equal(t, readIndxMsg3, r1.msgs[0])
+	requireProtoEqual(t, readIndxMsg3, r1.msgs[0])
 	readIndxMsg3 = &raftpb.Message{From: new(uint64(3)), To: new(uint64(3)), Type: new(raftpb.MessageType_MsgReadIndex), Entries: testEntries}
-	require.Equal(t, readIndxMsg3, r1.msgs[1])
+	requireProtoEqual(t, readIndxMsg3, r1.msgs[1])
 }
 
 // TestNodeProposeConfig ensures that node.ProposeConfChange sends the given configuration proposal
