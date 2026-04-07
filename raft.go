@@ -28,6 +28,7 @@ import (
 	"strings"
 	"sync"
 
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/openkvlab/raft/confchange"
@@ -1329,7 +1330,12 @@ func stepLeader(r *raft, m *pb.Message) error {
 
 				if failedCheck != "" && !r.disableConfChangeValidation {
 					v2cc := cc.AsV2()
-					r.logger.Infof("%x ignoring conf change %s at config %s: %s", r.id, v2cc.String(), r.trk.Config, failedCheck)
+					confChangeStr := "<invalid>"
+					b, err := protojson.MarshalOptions{EmitUnpopulated: true, UseProtoNames: true}.Marshal(v2cc)
+					if err == nil {
+						confChangeStr = string(b)
+					}
+					r.logger.Infof("%x ignoring conf change %s at config %s: %s", r.id, confChangeStr, r.trk.Config, failedCheck)
 					m.Entries[i] = &pb.Entry{Type: pb.EntryType_EntryNormal.Enum()}
 				} else {
 					r.pendingConfIndex = r.raftLog.lastIndex() + uint64(i) + 1
