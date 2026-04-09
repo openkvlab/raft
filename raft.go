@@ -20,6 +20,7 @@ package raft
 import (
 	"bytes"
 	"crypto/rand"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -1333,7 +1334,9 @@ func stepLeader(r *raft, m *pb.Message) error {
 					confChangeStr := "<invalid>"
 					b, err := protojson.MarshalOptions{EmitUnpopulated: true, UseProtoNames: true}.Marshal(v2cc)
 					if err == nil {
-						confChangeStr = string(b)
+						var buf bytes.Buffer
+						_ = json.Compact(&buf, b)
+						confChangeStr = buf.String()
 					}
 					r.logger.Infof("%x ignoring conf change %s at config %s: %s", r.id, confChangeStr, r.trk.Config, failedCheck)
 					m.Entries[i] = &pb.Entry{Type: pb.EntryType_EntryNormal.Enum()}
