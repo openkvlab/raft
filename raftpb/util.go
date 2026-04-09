@@ -45,31 +45,3 @@ func EnsureSnapshot(s *Snapshot) *Snapshot {
 	s.Metadata = EnsureSnapshotMetadata(s.Metadata)
 	return s
 }
-
-// EntrySliceToPointers converts a slice of Entry values to a slice of Entry pointers.
-// TODO: remove this function
-func EntrySliceToPointers(ents []Entry) []*Entry {
-	if ents == nil {
-		return nil
-	}
-	result := make([]*Entry, len(ents))
-	for i := range ents {
-		result[i] = &ents[i]
-	}
-	return result
-}
-
-// EntrySliceFromPointers converts a slice of Entry pointers to a slice of Entry values.
-// TODO: remove this function
-func EntrySliceFromPointers(ents []*Entry) []Entry {
-	if ents == nil {
-		return nil
-	}
-	result := make([]Entry, len(ents))
-	for i := range ents {
-		if ents[i] != nil {
-			result[i] = *ents[i]
-		}
-	}
-	return result
-}
