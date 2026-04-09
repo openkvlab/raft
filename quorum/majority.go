@@ -1,3 +1,6 @@
+// This code has been modified from its original form by The OpenKVLab Authors.
+// All modifications are Copyright 2026 The OpenKVLab Authors.
+//
 // This code has been modified from its original form by The Openkblab Authors.
 // All modifications are Copyright 2026 The Openkblab Authors.
 //
@@ -177,7 +180,7 @@ func (c MajorityConfig) VoteResult(votes map[uint64]bool) VoteResult {
 		return VoteWon
 	}
 
-	var votedCnt int //vote counts for yes.
+	var votedCnt int // vote counts for yes.
 	var missing int
 	for id := range c {
 		v, ok := votes[id]

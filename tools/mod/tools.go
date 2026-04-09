@@ -1,3 +1,6 @@
+// This code has been modified from its original form by The OpenKVLab Authors.
+// All modifications are Copyright 2026 The OpenKVLab Authors.
+//
 // This code has been modified from its original form by The Openkblab Authors.
 // All modifications are Copyright 2026 The Openkblab Authors.
 //
